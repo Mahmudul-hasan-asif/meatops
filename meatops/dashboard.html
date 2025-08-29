@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin – Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <style>
+    /* ensure charts use the full card height */
+    .chart-wrap { height: 360px; }           /* bump this up/down to taste */
+    .chart-canvas { width: 100% !important; height: 100% !important; }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div>
+        <h1>MeatOps</h1>
+        <small>Admin Console</small>
+      </div>
+    </div>
+
+    <!-- UNIFIED NAV -->
+    <nav class="nav">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="intake.html" class="nav-link">Livestock / Intake</a>
+      <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+      <a href="quality-control.html" class="nav-link">Quality Control</a>
+      <a href="waste-management.html" class="nav-link">Waste Management</a>
+      <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+      <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+      <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+      <a href="suppliers.html" class="nav-link">Suppliers</a>
+      <a href="customers.html" class="nav-link">Customers</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </nav>
+
+    <footer class="sidebar-footer">v2.0</footer>
+  </aside>
+
+  <main class="main">
+    <!-- HEADER -->
+    <header class="topbar">
+      <div class="breadcrumbs"><span>Dashboard</span></div>
+    </header>
+
+    <!-- CONTENT -->
+    <section class="page show" id="dashboard">
+      <!-- KPI STRIP -->
+      <div class="grid" style="grid-template-columns:repeat(5,minmax(0,1fr)); gap:16px;">
+        <div class="card">
+          <h3>Total Animals</h3>
+          <div id="kpi-animals" style="font-size:28px; font-weight:700;">—</div>
+          <div class="muted">from intake</div>
+        </div>
+        <div class="card">
+          <h3>Open Batches</h3>
+          <div id="kpi-batches" style="font-size:28px; font-weight:700;">—</div>
+          <div class="muted">from batches</div>
+        </div>
+        <div class="card">
+          <h3>Packed Products</h3>
+          <div id="kpi-products" style="font-size:28px; font-weight:700;">—</div>
+          <div class="muted">product list</div>
+        </div>
+        <div class="card">
+          <h3>Lots in Facilities</h3>
+          <div id="kpi-lots" style="font-size:28px; font-weight:700;">—</div>
+          <div class="muted">batches by facility</div>
+        </div>
+        <div class="card">
+          <h3>Expiring ≤ 3 days</h3>
+          <div id="kpi-expiring" style="font-size:28px; font-weight:700;">—</div>
+          <div class="muted">watchlist</div>
+        </div>
+      </div>
+
+      <!-- CHART ROW -->
+      <div class="grid" style="margin-top:16px; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px;">
+        <!-- Intake by Category (PIE) -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Intake by Category</h3>
+            <a class="btn outline" href="intake.html">View Intake</a>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-intake" class="chart-canvas" aria-label="Animals by Category (pie)"></canvas>
+            <ul id="chart-intake-fallback" class="muted" style="display:none; margin-top:8px;"></ul>
+          </div>
+        </div>
+
+        <!-- Expiring Soon (BAR) -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Expiring Soon (≤ 3 days)</h3>
+            <a class="btn outline" href="inventory.html">View Inventory</a>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-expiring-products" class="chart-canvas" aria-label="Top products expiring soon"></canvas>
+          </div>
+        </div>
+
+        <!-- Status Mix (≤ 3 days) (DOUGHNUT) -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Status Mix (≤ 3 days)</h3>
+            <a class="btn outline" href="inventory.html">Details</a>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-expiring-status" class="chart-canvas" aria-label="Status mix for soon-to-expire lots"></canvas>
+          </div>
+        </div>
+
+        <!-- NEW: Expiry Trend (LINE) -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Expiry Trend (next 7 days)</h3>
+            <a class="btn outline" href="inventory.html">Details</a>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-expiry-trend" class="chart-canvas" aria-label="Expiry trend line"></canvas>
+          </div>
+        </div>
+
+        <!-- Cold chain -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Cold Chain</h3>
+            <a class="btn outline" href="storage.html">View Storage</a>
+          </div>
+          <ul class="list" id="list-coldchain" style="margin:0; padding-left:16px;">
+            <li class="muted">Loading…</li>
+          </ul>
+          <p class="muted" style="margin-top:10px;">Latest sensor readings by facility.</p>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Recent Activity</h3>
+            <a class="btn outline" href="processing.html">Go to Processing</a>
+          </div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-activity">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Event</th>
+                  <th>Ref</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="3">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <script>
+    /* ---------- helpers ---------- */
+    async function fetchJSON(url, options={}) {
+      const res = await fetch(url, options);
+      const text = await res.text();
+      try { return JSON.parse(text); }
+      catch {
+        const preview = text.replace(/\s+/g,' ').trim().slice(0, 300);
+        throw new Error('Server returned non-JSON. Preview: ' + preview);
+      }
+    }
+    function fmt2(n){ return Number(n ?? 0).toFixed(2); }
+    function daysLeft(dateStr){
+      if(!dateStr) return null;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const d = new Date(dateStr + 'T00:00:00');
+      return Math.ceil((d - today)/(1000*60*60*24));
+    }
+    function expiryBadge(dateStr){
+      const d = daysLeft(dateStr);
+      if(d === null) return '<span class="badge">'+(dateStr||'—')+'</span>';
+      if(d < 0) return `<span class="badge danger">${dateStr} • ${Math.abs(d)} days ago</span>`;
+      if(d <= 3) return `<span class="badge warn">${dateStr} • in ${d} days</span>`;
+      return `<span class="badge ok">${dateStr} • in ${d} days</span>`;
+    }
+    function pill(status){
+      const map = { available:'pill ok', allocated:'pill info', on_hold:'pill warn', expired:'pill danger' };
+      return `<span class="${map[status]||'pill'}">${status||'-'}</span>`;
+    }
+
+    /* ---------- DOM refs ---------- */
+    const kpiAnimals   = document.getElementById('kpi-animals');
+    const kpiBatches   = document.getElementById('kpi-batches');
+    const kpiProducts  = document.getElementById('kpi-products');
+    const kpiLots      = document.getElementById('kpi-lots');
+    const kpiExpiring  = document.getElementById('kpi-expiring');
+
+    const ccList       = document.getElementById('list-coldchain');
+    const actTbody     = document.querySelector('#tbl-activity tbody');
+
+    // Chart refs
+    const CATS = ['chicken','beef','mutton','turkey','duck'];
+    let intakeChart = null;
+    let expProductsChart = null;
+    let expStatusChart   = null;
+    let expTrendChart    = null;
+
+    function chartColors(){
+      const fills = [
+        'rgba(88,166,255,0.75)',
+        'rgba(52,211,153,0.75)',
+        'rgba(245,158,11,0.75)',
+        'rgba(239,68,68,0.75)',
+        'rgba(167,139,250,0.75)',
+        'rgba(234,179,8,0.75)',
+        'rgba(16,185,129,0.75)',
+        'rgba(59,130,246,0.75)'
+      ];
+      const borders = fills.map(c => c.replace('0.75','1'));
+      return { fills, borders };
+    }
+
+    function renderIntakeChart(labels, values){
+      const canvas   = document.getElementById('chart-intake');
+      const fallback = document.getElementById('chart-intake-fallback');
+      if(!canvas) return;
+
+      const total = values.reduce((a,b)=>a+b,0) || 1;
+
+      if (window.Chart && typeof Chart === 'function') {
+        const { fills, borders } = chartColors();
+        if (intakeChart) intakeChart.destroy();
+        intakeChart = new Chart(canvas.getContext('2d'), {
+          type: 'pie',
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              backgroundColor: fills.slice(0, labels.length),
+              borderColor: borders.slice(0, labels.length),
+              borderWidth: 2,
+              hoverOffset: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { animateRotate: true, animateScale: true, duration: 800 },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'right',
+                labels: {
+                  boxWidth: 14,
+                  color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e6eefc'
+                }
+              },
+              tooltip: {
+                enabled: true,
+                backgroundColor: '#0e1625',
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#1f2a3b',
+                borderWidth: 1,
+                bodyColor: '#e6eefc',
+                titleColor: '#e6eefc',
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.parsed;
+                    const pct = ((val / total) * 100).toFixed(1);
+                    return `${ctx.label}: ${val} (${pct}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      } else {
+        fallback.style.display = 'block';
+        fallback.innerHTML = labels.map((l,i)=>`<li>${l}: ${values[i]}</li>`).join('');
+      }
+    }
+
+    function renderExpiringCharts(expSoon, bfAll){
+      const { fills, borders } = chartColors();
+
+      // ----- BAR: Top Products (fill card) -----
+      const prodMap = {};
+      expSoon.forEach(r => {
+        const name = r.product_name || 'Unnamed';
+        const onHand = Number(r.qty_on_hand_kg || 0);
+        prodMap[name] = (prodMap[name] || 0) + onHand;
+      });
+      const prodEntries = Object.entries(prodMap)
+        .sort((a,b)=>b[1]-a[1])
+        .slice(0,8);
+      const prodLabels = prodEntries.map(e=>e[0]);
+      const prodValues = prodEntries.map(e=>Number(e[1].toFixed(2)));
+
+      const c1 = document.getElementById('chart-expiring-products').getContext('2d');
+      if (expProductsChart) expProductsChart.destroy();
+      expProductsChart = new Chart(c1, {
+        type: 'bar',
+        data: {
+          labels: prodLabels,
+          datasets: [{
+            label: 'Available (kg)',
+            data: prodValues,
+            backgroundColor: fills.slice(0, prodLabels.length),
+            borderColor: borders.slice(0, prodLabels.length),
+            borderWidth: 2,
+            borderSkipped: false,
+            barPercentage: 1.0,
+            categoryPercentage: 0.9
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,     // <-- makes it fill the container height
+          layout: { padding: 6 },
+          scales: {
+            x: {
+              ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e6eefc', maxRotation: 30, minRotation: 30 }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e6eefc' },
+              grid: { drawBorder: false }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0e1625',
+              borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#1f2a3b',
+              borderWidth: 1,
+              bodyColor: '#e6eefc',
+              titleColor: '#e6eefc'
+            }
+          }
+        }
+      });
+
+      // ----- DOUGHNUT: Status Mix -----
+      const statusMap = { available:0, allocated:0, on_hold:0, expired:0, other:0 };
+      expSoon.forEach(r=>{
+        const s = (r.status||'').toLowerCase();
+        if (statusMap.hasOwnProperty(s)) statusMap[s] += 1;
+        else statusMap.other += 1;
+      });
+      const stLabels = Object.keys(statusMap);
+      const stValues = stLabels.map(k=>statusMap[k]);
+      const c3 = document.getElementById('chart-expiring-status').getContext('2d');
+      if (expStatusChart) expStatusChart.destroy();
+      expStatusChart = new Chart(c3, {
+        type: 'doughnut',
+        data: {
+          labels: stLabels.map(s => s.replace('_',' ')),
+          datasets: [{
+            data: stValues,
+            backgroundColor: fills.slice(0, stLabels.length),
+            borderColor: borders.slice(0, stLabels.length),
+            borderWidth: 2,
+            hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e6eefc' } },
+            tooltip: {
+              backgroundColor: '#0e1625',
+              borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#1f2a3b',
+              borderWidth: 1,
+              bodyColor: '#e6eefc',
+              titleColor: '#e6eefc'
+            }
+          }
+        }
+      });
+
+      // ----- LINE: Expiry Trend (next 7 days) -----
+      const days = Array.from({length:8}, (_,i)=>i); // 0..7
+      const trendCounts = days.map(()=>0);
+      bfAll.forEach(r=>{
+        const d = daysLeft(r.expiry_date);
+        if (d !== null && d >= 0 && d <= 7) trendCounts[d] += 1;
+      });
+      const labels = ['Today','+1d','+2d','+3d','+4d','+5d','+6d','+7d'];
+      const c4 = document.getElementById('chart-expiry-trend').getContext('2d');
+      if (expTrendChart) expTrendChart.destroy();
+      expTrendChart = new Chart(c4, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Lots expiring',
+            data: trendCounts,
+            fill: false,
+            tension: 0.3,
+            backgroundColor: fills[0],
+            borderColor: borders[0],
+            borderWidth: 2,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e6eefc' } },
+            y: { beginAtZero: true, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e6eefc' } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0e1625',
+              borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#1f2a3b',
+              borderWidth: 1,
+              bodyColor: '#e6eefc',
+              titleColor: '#e6eefc'
+            }
+          }
+        }
+      });
+    }
+
+    /* ---------- load KPIs & charts ---------- */
+    async function loadKPIs(){
+      // Animals + intake chart
+      let catCounts = CATS.map(()=>0);
+      try{
+        const a = await fetchJSON('api/animals-list.php');
+        if (a.ok && Array.isArray(a.data)) {
+          kpiAnimals.textContent = a.data.length;
+          for (const row of a.data) {
+            const idx = CATS.indexOf((row.category || '').toLowerCase());
+            if (idx > -1) catCounts[idx] += 1;
+          }
+        } else {
+          kpiAnimals.textContent = '0';
+        }
+      }catch{
+        kpiAnimals.textContent = '—';
+      }
+      renderIntakeChart(CATS, catCounts);
+
+      // Batches
+      let batchList = [];
+      try{
+        const b = await fetchJSON('api/batch-list.php');
+        if(b.ok && Array.isArray(b.data)) batchList = b.data;
+        kpiBatches.textContent = String(batchList.length || 0);
+      }catch{ kpiBatches.textContent = '—'; }
+
+      // Products
+      let productList = [];
+      try{
+        const p = await fetchJSON('api/product-list-list.php');
+        if(p.ok && Array.isArray(p.data)) productList = p.data;
+        kpiProducts.textContent = String(productList.length || 0);
+      }catch{ kpiProducts.textContent = '—'; }
+
+      // Batches by Facility (for lots + expiring soon)
+      let bf = [];
+      try{
+        const j = await fetchJSON('api/bf-list.php');
+        if(j.ok && Array.isArray(j.data)) bf = j.data;
+
+        // KPI: lots total
+        kpiLots.textContent = String(bf.length || 0);
+
+        // KPI: expiring ≤ 3 days
+        const expSoon = bf.filter(r => {
+          const d = daysLeft(r.expiry_date);
+          return d !== null && d <= 3;
+        });
+        kpiExpiring.textContent = String(expSoon.length);
+
+        // Render charts
+        renderExpiringCharts(expSoon, bf);
+      }catch(err){
+        if(kpiLots.textContent==='—') kpiLots.textContent='0';
+        if(kpiExpiring.textContent==='—') kpiExpiring.textContent='0';
+        ['chart-expiring-products','chart-expiring-status','chart-expiry-trend'].forEach(id=>{
+          const el = document.getElementById(id);
+          if(el && !el.dataset.annotated){
+            const p = el.parentElement;
+            const msg = document.createElement('p');
+            msg.className = 'muted';
+            msg.textContent = 'Failed to load expiring data.';
+            p.appendChild(msg);
+            el.dataset.annotated = '1';
+          }
+        });
+      }
+
+      // Cold chain
+      try{
+        const s = await fetchJSON('api/sensors-list.php');
+        if(s.ok && Array.isArray(s.data) && s.data.length){
+          const latestByFacility = {};
+          for(const r of s.data){
+            const key = r.facility_name || ('Facility #' + (r.facility_id ?? '?'));
+            const ts  = new Date(r.timestamp || r.created_at || 0).getTime();
+            if(!latestByFacility[key] || ts > latestByFacility[key].ts){
+              latestByFacility[key] = { txt: r, ts };
+            }
+          }
+          const items = Object.entries(latestByFacility).slice(0, 6).map(([fac, obj])=>{
+            const rec = obj.txt;
+            const type = (rec.type || '').toUpperCase();
+            const val  = (rec.reading_value ?? '—');
+            const ts   = (rec.timestamp || rec.created_at || '').toString().replace('T',' ').replace('Z','');
+            let status = 'OK';
+            if(type.includes('TEMP')){
+              const t = parseFloat(val);
+              if(!isNaN(t)){
+                if(t > 6) status = 'Alert';
+                else if(t >= 2 && t <= 4) status = 'OK';
+                else status = 'Check';
+              }
+            }
+            const dot = status==='OK' ? '• OK' : (status==='Alert' ? '• Alert' : '• Check');
+            return `<li>${fac}: ${val} ${type} ${dot} <span class="muted">(${ts})</span></li>`;
+          }).join('');
+          ccList.innerHTML = items || '<li class="muted">No recent sensor data.</li>';
+        }else{
+          ccList.innerHTML = '<li class="muted">No sensor endpoint or no data yet.</li>';
+        }
+      }catch{
+        ccList.innerHTML = '<li class="muted">Sensors not configured (api/sensors-list.php).</li>';
+      }
+
+      // Recent Activity
+      try{
+        const activity = [];
+        try{
+          const p = await fetchJSON('api/product-list-list.php');
+          if(p.ok && Array.isArray(p.data)){
+            p.data.slice(-8).reverse().forEach(row=>{
+              activity.push({ when:'recent', event:'Packed product', ref:`${row.product_id} • ${row.product_name} (${row.batch_code})` });
+            });
+          }
+        }catch{}
+        try{
+          const b = await fetchJSON('api/batch-list.php');
+          if(b.ok && Array.isArray(b.data)){
+            b.data.filter(x => Number(x.pushed)===1).slice(-5).reverse().forEach(x=>{
+              activity.push({ when:'recent', event:'Batch pushed', ref:`${x.batch_code} • ${x.product} • ${fmt2(x.qty_kg)}kg` });
+            });
+          }
+        }catch{}
+        actTbody.innerHTML = activity.length
+          ? activity.slice(0,10).map(a=>`<tr><td>—</td><td>${a.event}</td><td>${a.ref}</td></tr>`).join('')
+          : '<tr><td colspan="3">No recent events.</td></tr>';
+      }catch{
+        actTbody.innerHTML = '<tr><td colspan="3">Failed to load.</td></tr>';
+      }
+    }
+
+    /* ---------- init ---------- */
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadKPIs, { once:true });
+    } else {
+      loadKPIs();
+    }
+  </script>
+</body>
+
+<script defer>
+(function () {
+  const here = (location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+  document.querySelectorAll('aside .nav a.nav-link').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    const target = href.split('/').pop().split('#')[0].toLowerCase();
+    if (here === target || (here === '' && target === 'dashboard.html')) a.classList.add('active');
+  });
+}());
+</script>
+
+</html>

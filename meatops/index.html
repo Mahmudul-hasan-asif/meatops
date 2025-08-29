@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div>
+        <h1>MeatOps</h1>
+        <small>Admin Console</small>
+      </div>
+    </div>
+
+    <!-- UNIFIED NAV -->
+    <nav class="nav">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="intake.html" class="nav-link">Livestock / Intake</a>
+    <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+    <a href="inventory.html" class="nav-link">Inventory</a>
+    <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+    <a href="quality-control.html" class="nav-link">Quality Control</a>
+    <a href="waste-management.html" class="nav-link">Waste Management</a>
+    <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+    <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+    <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+    <a href="suppliers.html" class="nav-link">Suppliers</a>
+    <a href="customers.html" class="nav-link">Customers</a>
+    <a href="settings.html" class="nav-link">Settings</a>
+  </nav>
+
+    <footer class="sidebar-footer">v1.8</footer>
+  </aside>
+
+
+  <main class="main">
+    <!-- HEADER -->
+    <header class="topbar">
+      <div class="breadcrumbs"><span id="crumb">Dashboard</span></div>
+    </header>
+
+
+
+    <!-- LIVESTOCK / INTAKE
+    <section class="page" id="intake">
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <h2>Animals</h2>
+            <button class="btn primary open-modal" data-modal="modal-animal">+ Add Animal</button>
+          </div>
+          <table class="table" id="tbl-animals">
+            <thead><tr><th>ID</th><th>Species</th><th>Origin Farm</th><th>Arrival Date</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Processing Units</h2>
+            <button class="btn primary open-modal" data-modal="modal-processing">+ Add Processing Unit</button>
+          </div>
+          <table class="table" id="tbl-processing">
+            <thead><tr><th>ID</th><th>Name</th><th>Animal ID</th><th>Location</th><th>Cut Type</th><th>Proc. Date</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Batches</h2>
+            <button class="btn primary open-modal" data-modal="modal-batch">+ Add Batch</button>
+          </div>
+          <table class="table" id="tbl-batches">
+            <thead><tr><th>ID</th><th>Product</th><th>Qty (kg)</th><th>Proc. Date</th><th>Expiry</th><th>Unit</th><th>Facility</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    -->
+
+    <!-- PROCESSING & YIELD -->
+    <section class="page" id="processing">
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <h2>Waste / Byproducts</h2>
+            <button class="btn primary open-modal" data-modal="modal-waste">+ Log Waste</button>
+          </div>
+          <table class="table" id="tbl-waste">
+            <thead><tr><th>ID</th><th>Batch</th><th>Type</th><th>Weight (kg)</th><th>Disposition</th><th>Created</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- INVENTORY -->
+    <section class="page" id="inventory">
+      <div class="stack inv-split">
+        <!-- Products -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Products</h2>
+            <div class="toolbar">
+              <input type="text" id="search-name" placeholder="Search by name" />
+              <input type="number" id="search-id" placeholder="ID" />
+              <div class="shelf-filter">
+                <select id="search-shelf-op" title="Shelf life comparator">
+                  <option value="eq">=</option>
+                  <option value="ge">≥</option>
+                  <option value="le">≤</option>
+                </select>
+                <input type="number" id="search-shelf" placeholder="Shelf life (days)" />
+              </div>
+              <button class="btn outline" id="btn-search">Search</button>
+              <button class="btn" id="btn-reset">Reset</button>
+              <button class="btn primary open-modal" data-modal="modal-product-create">+ Add Product</button>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table" id="tbl-products">
+              <thead>
+                <tr>
+                  <th>Product name</th>
+                  <th>Product ID</th>
+                  <th>Price</th>
+                  <th>Quantity</th>
+                  <th>Sale</th>
+                  <th>Shelf Life</th>
+                  <th>Start date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Batches by Facility -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Batches by Facility</h2>
+            <button class="btn primary open-modal" data-modal="modal-bf-create">+ Add Lot to Facility</button>
+          </div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-inventory-batches">
+              <thead>
+                <tr>
+                  <th>Lot/Batch</th>
+                  <th>Product</th>
+                  <th>Facility + Bin</th>
+                  <th>Qty (Avail/Total)</th>
+                  <th>Expiry</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STORAGE & IoT -->
+    <section class="page" id="storage">
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <h2>Storage Facilities</h2>
+            <button class="btn primary open-modal" data-modal="modal-facility">+ Add Facility</button>
+          </div>
+          <table class="table" id="tbl-facilities">
+            <thead><tr><th>ID</th><th>Location</th><th>Type</th><th>Max Capacity</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Sensor Readings</h2>
+            <button class="btn primary open-modal" data-modal="modal-sensor">+ Record Reading</button>
+          </div>
+          <table class="table" id="tbl-sensors">
+            <thead><tr><th>ID</th><th>Type</th><th>Facility</th><th>Value</th><th>Timestamp</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUALITY CONTROL -->
+    <section class="page" id="qc">
+      <div class="card">
+        <div class="card-head">
+          <h2>Quality Control Reports</h2>
+          <button class="btn primary open-modal" data-modal="modal-qc">+ Add QC Report</button>
+        </div>
+        <table class="table" id="tbl-qc">
+          <thead><tr><th>ID</th><th>Batch</th><th>Inspector</th><th>Test Date</th><th>Result</th><th>Remarks</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- WASTE -->
+    <section class="page" id="waste">
+      <div class="card">
+        <div class="card-head">
+          <h2>Waste Management</h2>
+          <button class="btn primary open-modal" data-modal="modal-waste">+ Log Waste</button>
+        </div>
+        <table class="table" id="tbl-waste-2">
+          <thead><tr><th>ID</th><th>Batch</th><th>Type</th><th>Weight (kg)</th><th>Disposition</th><th>Created</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ORDERS & DISTRIBUTION -->
+    <section class="page" id="orders">
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <h2>Sales Orders</h2>
+            <button class="btn primary open-modal" data-modal="modal-order">+ Create Order</button>
+          </div>
+          <table class="table" id="tbl-orders">
+            <thead><tr><th>ID</th><th>Customer</th><th>Order Date</th><th>Delivery Date</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Order Lines</h2>
+            <button class="btn primary open-modal" data-modal="modal-order-detail">+ Add Order Line</button>
+          </div>
+          <table class="table" id="tbl-order-lines">
+            <thead><tr><th>ID</th><th>Order</th><th>Batch</th><th>Qty</th><th>Assign To</th><th>Notes</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Deliveries</h2>
+            <button class="btn primary open-modal" data-modal="modal-delivery">+ Add Delivery</button>
+          </div>
+          <table class="table" id="tbl-deliveries">
+            <thead><tr><th>ID</th><th>Driver</th><th>Product</th><th>Qty</th><th>Date</th><th>Address</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Drivers</h2>
+            <button class="btn primary open-modal" data-modal="modal-driver">+ Add Driver</button>
+          </div>
+          <table class="table" id="tbl-drivers">
+            <thead><tr><th>ID</th><th>Name</th><th>Address</th><th>NID</th><th>Joining Date</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="page" id="analytics">
+      <div class="card">
+        <h2>Forecasting &amp; Analytics</h2>
+        <p class="muted">Plug charts here.</p>
+      </div>
+    </section>
+
+    <!-- COMPLIANCE -->
+    <section class="page" id="compliance">
+      <div class="card">
+        <div class="card-head">
+          <h2>Recalls</h2>
+          <button class="btn primary open-modal" data-modal="modal-recall">+ Initiate Recall</button>
+        </div>
+        <table class="table" id="tbl-recalls">
+          <thead><tr><th>Batch</th><th>Reason</th><th>Actions Taken</th><th>Created</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SUPPLIERS -->
+    <section class="page" id="suppliers">
+      <div class="card">
+        <div class="card-head">
+          <h2>Suppliers</h2>
+          <button class="btn primary open-modal" data-modal="modal-supplier">+ Add Supplier</button>
+        </div>
+        <table class="table" id="tbl-suppliers">
+          <thead><tr><th>Name</th><th>Contact</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section class="page" id="customers">
+      <div class="card">
+        <div class="card-head">
+          <h2>Customers</h2>
+          <button class="btn primary open-modal" data-modal="modal-customer">+ Add Customer</button>
+        </div>
+        <table class="table" id="tbl-customers">
+          <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Contact</th><th>Address</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="page" id="settings">
+      <div class="card">
+        <h2>Settings</h2>
+        <p class="muted">Coming soon.</p>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Add Product -->
+  <div class="modal" id="modal-product-create" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Product</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-product-create">
+        <label>Product name <input name="product_name" required></label>
+        <label>Price <input name="price" type="number" step="0.01" required></label>
+        <label>Quantity <input name="quantity" type="number" required></label>
+        <label>Sale
+          <select name="sale">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </label>
+        <label>Shelf life (days) <input name="shelf_life" type="number" min="0" required></label>
+        <label>Start date <input name="start_date" type="date" required></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Product -->
+  <div class="modal" id="modal-product-edit" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Edit Product</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-product-edit">
+        <input type="hidden" name="product_id" />
+        <label>Product name <input name="product_name" required></label>
+        <label>Price <input name="price" type="number" step="0.01" required></label>
+        <label>Quantity <input name="quantity" type="number" required></label>
+        <label>Sale
+          <select name="sale">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </label>
+        <label>Shelf life (days) <input name="shelf_life" type="number" min="0" required></label>
+        <label>Start date <input name="start_date" type="date" required></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== BATCHES BY FACILITY MODALS ===== -->
+
+  <!-- Create (add lot to facility) -->
+  <div class="modal" id="modal-bf-create" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Lot to Facility</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-bf-create">
+        <div class="two">
+          <label>Batch ID <input name="batch_id" type="number" required></label>
+          <label>Product ID <input name="product_id" type="number" required></label>
+        </div>
+        <div class="two">
+          <label>Facility ID <input name="facility_id" type="number" required></label>
+          <label>Bin/Location <input name="location_bin" placeholder="A-03-R2-B15"></label>
+        </div>
+        <div class="two">
+          <label>On Hand (kg) <input name="qty_on_hand_kg" type="number" step="0.01" required></label>
+          <label>Reserved (kg) <input name="qty_reserved_kg" type="number" step="0.01" value="0"></label>
+        </div>
+        <div class="two">
+          <label>Expiry Date <input name="expiry_date" type="date" required></label>
+          <label>Status
+            <select name="status">
+              <option value="available">available</option>
+              <option value="allocated">allocated</option>
+              <option value="on_hold">on_hold</option>
+              <option value="expired">expired</option>
+            </select>
+          </label>
+        </div>
+        <label>Lot Code <input name="lot_code" placeholder="optional (auto if blank)"></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit -->
+  <div class="modal" id="modal-bf-edit" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Edit Lot in Facility</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-bf-edit">
+        <input type="hidden" name="id" />
+        <div class="two">
+          <label>Facility ID <input name="facility_id" type="number" required></label>
+          <label>Bin/Location <input name="location_bin"></label>
+        </div>
+        <div class="two">
+          <label>On Hand (kg) <input name="qty_on_hand_kg" type="number" step="0.01" required></label>
+          <label>Reserved (kg) <input name="qty_reserved_kg" type="number" step="0.01" required></label>
+        </div>
+        <div class="two">
+          <label>Expiry Date <input name="expiry_date" type="date" required></label>
+          <label>Status
+            <select name="status">
+              <option value="available">available</option>
+              <option value="allocated">allocated</option>
+              <option value="on_hold">on_hold</option>
+              <option value="expired">expired</option>
+            </select>
+          </label>
+        </div>
+        <label>Lot Code <input name="lot_code"></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Move / Split -->
+  <div class="modal" id="modal-bf-move" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Move / Split Lot</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-bf-move">
+        <input type="hidden" name="source_id" />
+        <div class="two">
+          <label>Qty to move (kg) <input name="qty" type="number" step="0.01" required></label>
+          <label>Target Facility ID <input name="target_facility_id" type="number" required></label>
+        </div>
+        <label>Target Bin/Location <input name="target_location_bin" placeholder="A-03-R2-B15"></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Move / Split</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Other (existing) modals unchanged below... -->
+  <!-- Animal -->
+  <!--
+  <div class="modal" id="modal-animal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Animal</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Species <input name="species" required></label>
+        <label>Origin Farm <input name="origin_farm"></label>
+        <label>Arrival Date <input name="arrival_date" type="date"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+-->
+  <!-- Processing Unit
+  <div class="modal" id="modal-processing" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Processing Unit</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Animal ID <input name="animal_id" type="number"></label>
+        <label>Name <input name="name" required></label>
+        <label>Location <input name="location"></label>
+        <label>Cut Type <input name="cut_type"></label>
+        <label>Processing Date <input name="processing_date" type="date"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+-->
+  <!-- Batch
+  <div class="modal" id="modal-batch" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Batch</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Product ID <input name="product_id" type="number" required></label>
+        <div class="two">
+          <label>Processing Date <input name="processing_date" type="date" required></label>
+          <label>Expiry Date <input name="expiry_date" type="date"></label>
+        </div>
+        <label>Quantity (kg) <input name="quantity" type="number" step="0.01" required></label>
+        <div class="two">
+          <label>Processing Unit ID <input name="unit_id" type="number"></label>
+          <label>Facility ID <input name="facility_id" type="number"></label>
+        </div>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+  -->
+
+
+  <!-- Facility -->
+  <div class="modal" id="modal-facility" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Storage Facility</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Location <input name="location" required></label>
+        <label>Type <input name="type" placeholder="warehouse/freezer/vehicle" required></label>
+        <label>Max Capacity (kg) <input name="max_capacity" type="number" step="0.01"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sensor -->
+  <div class="modal" id="modal-sensor" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Record Sensor Reading</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Type <input name="type" required></label>
+        <label>Facility ID <input name="facility_id" type="number"></label>
+        <label>Reading Value <input name="reading_value" type="number" step="0.1" required></label>
+        <label>Timestamp <input name="timestamp" type="datetime-local"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- QC -->
+  <div class="modal" id="modal-qc" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add QC Report</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Batch ID <input name="batch_id" type="number" required></label>
+        <label>Inspector Name <input name="inspector_name"></label>
+        <label>Test Date <input name="test_date" type="date" required></label>
+        <label>Test Result
+          <select name="test_result" required><option>Pass</option><option>Fail</option><option>Hold</option></select>
+        </label>
+        <label>Remarks <textarea name="remarks" rows="3"></textarea></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Waste -->
+  <div class="modal" id="modal-waste" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Log Waste / Byproduct</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Batch ID <input name="batch_id" type="number" required></label>
+        <label>Type <input name="type" required></label>
+        <label>Weight (kg) <input name="weight" type="number" step="0.01" required></label>
+        <label>Disposition Method <input name="disposition_method" required></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Order -->
+  <div class="modal" id="modal-order" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Create Sales Order</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Customer ID <input name="customer_id" type="number" required></label>
+        <div class="two">
+          <label>Order Date <input name="order_date" type="date" required></label>
+          <label>Delivery Date <input name="delivery_date" type="date"></label>
+        </div>
+        <label>Status
+          <select name="status" required>
+            <option>pending</option><option>packed</option><option>shipped</option><option>delivered</option><option>canceled</option>
+          </select>
+        </label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Order line -->
+  <div class="modal" id="modal-order-detail" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Order Line</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Order ID <input name="order_id" type="number" required></label>
+        <label>Batch ID <input name="batch_id" type="number" required></label>
+        <label>Quantity <input name="quantity" type="number" required></label>
+        <label>Assign To <input name="assign_to"></label>
+        <label>Notes <input name="order_details"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delivery -->
+  <div class="modal" id="modal-delivery" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Delivery</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Driver ID <input name="driver_id" type="number"></label>
+        <label>Product ID <input name="product_id" type="number"></label>
+        <label>Quantity <input name="quantity" type="number"></label>
+        <label>Delivery Date <input name="delivery_date" type="date"></label>
+        <label>Delivery Address <input name="delivery_address"></label>
+        <label>Status <input name="status" placeholder="enroute/delivered/canceled"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Driver -->
+  <div class="modal" id="modal-driver" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Driver</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Name <input name="name" required></label>
+        <label>Address <input name="address"></label>
+        <label>NID <input name="nid"></label>
+        <label>Joining Date <input name="joining_date" type="date"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Customer -->
+  <div class="modal" id="modal-customer" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Customer</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Name <input name="name" required></label>
+        <label>Contact Info <input name="contact_info"></label>
+        <label>Type <input name="type"></label>
+        <label>Address <input name="address"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Supplier -->
+  <div class="modal" id="modal-supplier" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Supplier</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Name <input name="name" required></label>
+        <label>Contact <input name="contact"></label>
+        <label>Status <input name="status" placeholder="Approved/Pending/Suspended"></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Recall -->
+  <div class="modal" id="modal-recall" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Initiate Recall</h3><button class="icon close-modal">✕</button></div>
+      <form class="form">
+        <label>Recall Batch <input name="batch_id" type="number" required></label>
+        <label>Reason
+          <select name="reason"><option>Temperature breach</option><option>QC fail</option><option>Supplier notice</option></select>
+        </label>
+        <label>Actions Taken <textarea name="actions" rows="3"></textarea></label>
+        <div class="modal-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* Router */
+    const links=[...document.querySelectorAll('.nav-link')];
+    const pages=[...document.querySelectorAll('.page')];
+    const crumb=document.getElementById('crumb');
+    function show(hash){
+      const t=(hash||'#dashboard').slice(1);
+      pages.forEach(p=>p.classList.toggle('show',p.id===t));
+      links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+t));
+      crumb.textContent=document.querySelector('.nav-link.active')?.textContent||'Dashboard';
+    }
+    addEventListener('hashchange',()=>show(location.hash)); show(location.hash);
+
+    /* Modals */
+    document.querySelectorAll('.modal').forEach(m=>m.setAttribute('aria-hidden','true'));
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.setAttribute('aria-hidden','false'); document.body.classList.add('body-modal-open'); } }
+    function closeModal(el){ const m=el.closest('.modal'); if(!m) return; m.setAttribute('aria-hidden','true'); if(![...document.querySelectorAll('.modal')].some(x=>x.getAttribute('aria-hidden')==='false')) document.body.classList.remove('body-modal-open'); }
+    document.querySelectorAll('.open-modal').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modal)));
+    document.querySelectorAll('.close-modal,[data-cancel]').forEach(b=>b.addEventListener('click',()=>closeModal(b)));
+    document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) closeModal(m); }));
+
+    /* ===== Products CRUD + Search (unchanged) ===== */
+    const productsTbody = document.querySelector('#tbl-products tbody');
+    const createForm = document.querySelector('#form-product-create');
+    const editForm = document.querySelector('#form-product-edit');
+
+    const inpSearchName  = document.getElementById('search-name');
+    const inpSearchId    = document.getElementById('search-id');
+    const selShelfOp     = document.getElementById('search-shelf-op');
+    const inpSearchShelf = document.getElementById('search-shelf');
+    const btnSearch = document.getElementById('btn-search');
+    const btnReset  = document.getElementById('btn-reset');
+
+    let PRODUCTS_CACHE = [];
+
+    function money(v){ return Number(v).toFixed(2); }
+    function rowHTML(p){
+      return `
+        <tr data-id="${p.product_id}">
+          <td>${p.product_name ?? ''}</td>
+          <td>${p.product_id}</td>
+          <td>${money(p.price)}</td>
+          <td>${p.quantity}</td>
+          <td>${p.sale==1 ? 'Yes':'No'}</td>
+          <td>${(p.shelf_life ?? 0)} days</td>
+          <td>${p.start_date ?? ''}</td>
+          <td>
+            <div class="actions-inline">
+              <button class="btn sm outline act-edit">Edit</button>
+              <button class="btn sm danger act-delete">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    function renderProducts(arr){
+      if(!arr || !arr.length){
+        productsTbody.innerHTML = '<tr><td colspan="8">No products found.</td></tr>';
+        return;
+      }
+      productsTbody.innerHTML = arr.map(rowHTML).join('');
+    }
+
+    async function loadProducts(){
+      productsTbody.innerHTML = '<tr><td colspan="8">Loading…</td></tr>';
+      try{
+        const res = await fetch('api/products-list.php');
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error || 'Load error');
+        PRODUCTS_CACHE = Array.isArray(json.data) ? json.data : [];
+        renderProducts(PRODUCTS_CACHE);
+      }catch(err){
+        productsTbody.innerHTML = '<tr><td colspan="8">Failed to load.</td></tr>';
+        console.error(err);
+      }
+    }
+
+    function applyProductSearch(){
+      let list = PRODUCTS_CACHE.slice();
+      const name  = (inpSearchName.value || '').trim().toLowerCase();
+      const idStr = (inpSearchId.value || '').trim();
+      const shelfStr = (inpSearchShelf.value || '').trim();
+      const op = selShelfOp.value || 'eq';
+
+      if(idStr !== ''){
+        const id = parseInt(idStr, 10);
+        if(!isNaN(id)) list = list.filter(p => p.product_id === id);
+        return renderProducts(list);
+      }
+
+      if(name) list = list.filter(p => (p.product_name || '').toLowerCase().includes(name));
+
+      if(shelfStr !== ''){
+        const sh = parseInt(shelfStr, 10);
+        if(!isNaN(sh)) {
+          list = list.filter(p => {
+            const v = parseInt(p.shelf_life || 0, 10);
+            if(op === 'ge') return v >= sh;
+            if(op === 'le') return v <= sh;
+            return v === sh;
+          });
+        }
+      }
+
+      renderProducts(list);
+    }
+
+    btnSearch.addEventListener('click', applyProductSearch);
+    btnReset.addEventListener('click', ()=>{
+      inpSearchName.value = '';
+      inpSearchId.value = '';
+      inpSearchShelf.value = '';
+      selShelfOp.value = 'eq';
+      renderProducts(PRODUCTS_CACHE);
+    });
+    [inpSearchName, inpSearchId, inpSearchShelf].forEach(el=>{
+      el.addEventListener('keydown', e=>{
+        if(e.key === 'Enter'){ e.preventDefault(); applyProductSearch(); }
+      });
+    });
+
+    createForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(createForm).entries());
+      try{
+        const res = await fetch('api/product-create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error || 'Create failed');
+        PRODUCTS_CACHE.unshift(json.data);
+        applyProductSearch();
+        closeModal(createForm);
+        createForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    productsTbody.addEventListener('click', async e=>{
+      const row = e.target.closest('tr'); if(!row) return;
+      const id = row.dataset.id;
+
+      if(e.target.closest('.act-edit')){
+        const c=row.children;
+        editForm.product_id.value   = id;
+        editForm.product_name.value = c[0].textContent.trim();
+        editForm.price.value        = c[2].textContent.trim();
+        editForm.quantity.value     = c[3].textContent.trim();
+        editForm.sale.value         = (c[4].textContent.trim()==='Yes' ? '1':'0');
+        editForm.shelf_life.value   = c[5].textContent.replace(' days','').trim();
+        editForm.start_date.value   = c[6].textContent.trim();
+        openModal('modal-product-edit');
+      }
+
+      if(e.target.closest('.act-delete')){
+        if(!confirm('Delete this product?')) return;
+        try{
+          const res = await fetch('api/product-delete.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:id})});
+          const json = await res.json();
+          if(!json.ok) throw new Error(json.error || 'Delete failed');
+          PRODUCTS_CACHE = PRODUCTS_CACHE.filter(p => String(p.product_id) !== String(id));
+          applyProductSearch();
+        }catch(err){ alert(err.message); }
+      }
+    });
+
+    editForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(editForm).entries());
+      try{
+        const res = await fetch('api/product-update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error || 'Update failed');
+        const idx = PRODUCTS_CACHE.findIndex(p => String(p.product_id) === String(data.product_id));
+        if(idx > -1) PRODUCTS_CACHE[idx] = json.data;
+        applyProductSearch();
+        closeModal(editForm);
+        editForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    /* ===== Batches by Facility ===== */
+    const bfTbody = document.querySelector('#tbl-inventory-batches tbody');
+    const bfCreateForm = document.getElementById('form-bf-create');
+    const bfEditForm   = document.getElementById('form-bf-edit');
+    const bfMoveForm   = document.getElementById('form-bf-move');
+
+    function daysLeft(dateStr){
+      if(!dateStr) return null;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const d = new Date(dateStr+"T00:00:00");
+      return Math.ceil((d - today) / (1000*60*60*24));
+    }
+    function expiryHTML(dateStr){
+      const dleft = daysLeft(dateStr);
+      const cls = dleft==null ? 'badge' :
+        (dleft < 0 ? 'badge danger' : (dleft <= 3 ? 'badge warn' : 'badge ok'));
+      const txt = dleft==null ? '' : (dleft<0 ? `${Math.abs(dleft)} days ago` : `in ${dleft} days`);
+      return `<span class="${cls}">${dateStr}${txt?` • ${txt}`:''}</span>`;
+    }
+    function statusPill(st){
+      const map = {
+        available:'pill ok',
+        allocated:'pill info',
+        on_hold:'pill warn',
+        expired:'pill danger'
+      };
+      return `<span class="${map[st]||'pill'}">${st}</span>`;
+    }
+    function qtyFmt(n){ return Number(n||0).toFixed(2); }
+
+    function bfRowHTML(r){
+      const onHand   = Number(r.qty_on_hand_kg || 0);
+      const reserved = Number(r.qty_reserved_kg || 0);
+      const avail    = onHand;                 // show on-hand as "avail"
+      const total    = onHand + reserved;      // total = on-hand + reserved
+
+      const lot = r.lot_code && r.lot_code.trim()!=='' ? r.lot_code : `B#${r.batch_id}`;
+      const facBin = `<div class="facility">${r.facility_name||''}</div><div class="bin">${r.location_bin||'-'}</div>`;
+
+      return `
+      <tr data-id="${r.bf_id}"
+          data-onhand="${onHand}"
+          data-reserved="${reserved}"
+          data-expiry="${r.expiry_date}">
+        <td>${lot}</td>
+        <td>${r.product_name||''}</td>
+        <td>${facBin}</td>
+        <td>${qtyFmt(avail)} / ${qtyFmt(total)} kg</td>
+        <td>${expiryHTML(r.expiry_date)}</td>
+        <td>${statusPill(r.status)}</td>
+        <td>
+          <div class="actions-inline">
+            <button class="btn sm danger act-bf-delete">Delete</button>
+            <button class="btn sm outline act-bf-edit">Edit</button>
+            <button class="btn sm outline act-bf-split">Split</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    async function loadBF(){
+      bfTbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+      try{
+        const res = await fetch('api/bf-list.php');
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error||'Load error');
+        if(!json.data.length){ bfTbody.innerHTML = '<tr><td colspan="7">No lots.</td></tr>'; return; }
+        bfTbody.innerHTML = json.data.map(bfRowHTML).join('');
+      }catch(err){
+        bfTbody.innerHTML = '<tr><td colspan="7">Failed to load.</td></tr>';
+        console.error(err);
+      }
+    }
+
+    // Create
+    bfCreateForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(bfCreateForm).entries());
+      try{
+        const res = await fetch('api/bf-create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error||'Create failed');
+        bfTbody.insertAdjacentHTML('afterbegin', bfRowHTML(json.data));
+        closeModal(bfCreateForm);
+        bfCreateForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    // Table actions
+    bfTbody.addEventListener('click', async e=>{
+      const row = e.target.closest('tr'); if(!row) return;
+      const id = row.dataset.id;
+      const cells = row.children;
+
+      if(e.target.closest('.act-bf-edit')){
+        bfEditForm.id.value                = id;
+        bfEditForm.facility_id.value       = '';
+        bfEditForm.location_bin.value      = cells[2].querySelector('.bin')?.textContent.trim() || '';
+        bfEditForm.qty_on_hand_kg.value    = row.dataset.onhand || '';
+        bfEditForm.qty_reserved_kg.value   = row.dataset.reserved || '';
+        bfEditForm.expiry_date.value       = row.dataset.expiry || '';
+        bfEditForm.status.value            = 'available';
+        bfEditForm.lot_code.value          = cells[0].textContent.trim();
+        openModal('modal-bf-edit');
+      }
+
+      if(e.target.closest('.act-bf-delete')){
+        if(!confirm('Delete this lot from facility?')) return;
+        try{
+          const res = await fetch('api/bf-delete.php',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ id })
+          });
+          const json = await res.json();
+          if(!json.ok) throw new Error(json.error||'Delete failed');
+          row.remove();
+          if(!bfTbody.children.length){
+            bfTbody.innerHTML = '<tr><td colspan="7">No lots.</td></tr>';
+          }
+        }catch(err){ alert(err.message); }
+      }
+
+      if(e.target.closest('.act-bf-split')){
+        bfMoveForm.source_id.value = id;
+        bfMoveForm.qty.value = '';
+        bfMoveForm.target_facility_id.value = '';
+        bfMoveForm.target_location_bin.value = '';
+        openModal('modal-bf-move');
+      }
+    });
+
+    // Edit
+    bfEditForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(bfEditForm).entries());
+      try{
+        const res = await fetch('api/bf-update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error||'Update failed');
+        await loadBF();
+        closeModal(bfEditForm);
+        bfEditForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    // Move / Split
+    bfMoveForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(bfMoveForm).entries());
+      try{
+        const res = await fetch('api/bf-split.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error||'Operation failed');
+        await loadBF();
+        closeModal(bfMoveForm);
+        bfMoveForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    // Init
+    loadProducts();
+    loadBF();
+  </script>
+</body>
+
+<script defer>
+(function () {
+  // current filename (e.g., 'inventory.html'); default dashboard
+  const here = (location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+
+  document.querySelectorAll('aside .nav a.nav-link').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    // compare only the file part of the href (strip folders and #hash)
+    const target = href.split('/').pop().split('#')[0].toLowerCase();
+
+    if (here === target || (here === '' && target === 'dashboard.html')) {
+      a.classList.add('active');
+    }
+  });
+}());
+</script>
+
+
+</html>

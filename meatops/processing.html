@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin - Processing & Yield</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div>
+        <h1>MeatOps</h1>
+        <small>Admin Console</small>
+      </div>
+    </div>
+
+    <!-- UNIFIED NAV -->
+    <nav class="nav">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="intake.html" class="nav-link">Livestock / Intake</a>
+    <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+    <a href="inventory.html" class="nav-link">Inventory</a>
+    <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+    <a href="quality-control.html" class="nav-link">Quality Control</a>
+    <a href="waste-management.html" class="nav-link">Waste Management</a>
+    <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+    <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+    <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+    <a href="suppliers.html" class="nav-link">Suppliers</a>
+    <a href="customers.html" class="nav-link">Customers</a>
+    <a href="settings.html" class="nav-link">Settings</a>
+  </nav>
+
+    <footer class="sidebar-footer">v1.8</footer>
+  </aside>
+
+
+  <main class="main">
+    <header class="topbar">
+      <div class="breadcrumbs"><span>Processing &amp; Yield</span></div>
+    </header>
+
+    <section class="page show" id="processing">
+      <div class="stack">
+
+        <!-- TABLE 1: Pushed Batches -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Pushed Batches</h2>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table" id="tbl-pushed-batches">
+              <thead>
+                <tr>
+                  <th>Batch</th>
+                  <th>Product Name</th>
+                  <th>Quantity (kg)</th>
+                  <th>Expire</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TABLE 2: Product List -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Product List</h2>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table" id="tbl-product-list">
+              <thead>
+                <tr>
+                  <th>Product ID</th>
+                  <th>Batch Code</th>
+                  <th>Product Name</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TABLE 3 placeholder (Waste / Byproducts) -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Waste / Byproducts</h2>
+          </div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-waste">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Source</th>
+                  <th>Qty (kg)</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" class="muted">We’ll wire this after Product List.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <!-- PACK MODAL -->
+  <div class="modal" id="modal-pack" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Pack Batch</h3>
+        <button class="icon close-modal">✕</button>
+      </div>
+
+      <form class="form" id="form-pack">
+        <input type="hidden" id="pack_batch_id">
+        <div class="two">
+          <label>Batch Code
+            <input id="pack_batch_code" readonly>
+          </label>
+          <label>Product Name
+            <input id="pack_product_name" readonly>
+          </label>
+        </div>
+        <div class="two">
+          <label>Total Quantity (kg)
+            <input id="pack_total_qty" readonly>
+          </label>
+          <label>Package Size
+            <select id="pack_size" required>
+              <option value="1">1 kg</option>
+              <option value="5">5 kg</option>
+              <option value="10">10 kg</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="pack_preview" class="muted" style="margin-top:.25rem;"></div>
+
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">OK</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PRINT AREA (hidden) -->
+  <div id="print-area" style="display:none; font-family: system-ui, Arial, sans-serif;">
+    <div id="print-card" style="padding:16px; border:1px solid #000; width:320px;">
+      <h3 style="margin:0 0 8px;">MeatOps Product</h3>
+      <div><strong>Product ID:</strong> <span id="p_pid"></span></div>
+      <div><strong>Batch:</strong> <span id="p_batch"></span></div>
+      <div><strong>Name:</strong> <span id="p_name"></span></div>
+      <div><strong>Weight:</strong> <span id="p_weight"></span> kg</div>
+      <div><strong>Date:</strong> <span id="p_date"></span></div>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- helpers ---------- */
+    async function fetchJSON(url, options={}) {
+      const res = await fetch(url, options);
+      const text = await res.text();
+      try { return JSON.parse(text); }
+      catch { throw new Error('Server returned non-JSON. Preview: ' + text.slice(0, 300)); }
+    }
+    function fmt2(n){ return Number(n ?? 0).toFixed(2); }
+    function daysLeft(expireStr){
+      if(!expireStr) return '';
+      const today = new Date(); today.setHours(0,0,0,0);
+      const exp   = new Date(expireStr);
+      const diff  = Math.round((exp - today) / (1000*60*60*24));
+      if(diff < 0) return `${Math.abs(diff)}d ago (expired)`;
+      if(diff === 0) return 'expires today';
+      return `${diff}d left`;
+    }
+
+    /* ---------- modal control ---------- */
+    function openModal(id){const m=document.getElementById(id);if(m){m.setAttribute('aria-hidden','false');document.body.classList.add('body-modal-open');}}
+    function closeModal(el){const modal=typeof el==='string'?document.getElementById(el):el.closest('.modal');if(!modal)return;modal.setAttribute('aria-hidden','true');if(![...document.querySelectorAll('.modal')].some(x=>x.getAttribute('aria-hidden')==='false')){document.body.classList.remove('body-modal-open');}}
+    document.addEventListener('click', e=>{
+      if(e.target.matches('.close-modal,[data-cancel]')) closeModal(e.target);
+      if(e.target.classList.contains('modal')) closeModal(e.target);
+    });
+
+    /* ---------- TABLE 1: Pushed Batches ---------- */
+    const pushedTbody = document.querySelector('#tbl-pushed-batches tbody');
+
+    function pushedRowHTML(r){
+      return `
+        <tr data-id="${r.id}" data-batch="${r.batch_code}">
+          <td>${r.batch_code}</td>
+          <td>${r.product}</td>
+          <td>${fmt2(r.qty_kg)}</td>
+          <td>${daysLeft(r.expire_date)}</td>
+          <td>
+            <div class="actions-inline">
+              <button class="btn sm primary act-pack">Pack</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    async function loadPushedBatches(){
+      pushedTbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+      try{
+        const j = await fetchJSON('api/batch-list.php');
+        if(!j.ok) throw new Error(j.error || 'Load failed');
+        const list = (Array.isArray(j.data) ? j.data : []).filter(r => Number(r.pushed) === 1);
+        pushedTbody.innerHTML = list.length
+          ? list.map(pushedRowHTML).join('')
+          : '<tr><td colspan="5">No pushed batches yet.</td></tr>';
+      }catch(err){
+        pushedTbody.innerHTML = `<tr><td colspan="5">Failed to load.<div class="muted">${err.message}</div></td></tr>`;
+      }
+    }
+
+    // open pack modal from a pushed row
+    const packForm = document.getElementById('form-pack');
+    const fldPackBatchId   = document.getElementById('pack_batch_id');
+    const fldPackBatchCode = document.getElementById('pack_batch_code');
+    const fldPackProdName  = document.getElementById('pack_product_name');
+    const fldPackTotalQty  = document.getElementById('pack_total_qty');
+    const selPackSize      = document.getElementById('pack_size');
+    const packPreview      = document.getElementById('pack_preview');
+
+    pushedTbody.addEventListener('click', e=>{
+      const row = e.target.closest('tr'); if(!row) return;
+      if(e.target.closest('.act-pack')){
+        const cells = row.children;
+        fldPackBatchId.value   = row.dataset.id;
+        fldPackBatchCode.value = cells[0].textContent.trim();
+        fldPackProdName.value  = cells[1].textContent.trim();
+        fldPackTotalQty.value  = cells[2].textContent.trim(); // numeric string
+        selPackSize.value = '1';
+        updatePackPreview();
+        openModal('modal-pack');
+      }
+    });
+
+    function updatePackPreview(){
+      const total = parseFloat(fldPackTotalQty.value) || 0;
+      const size  = parseFloat(selPackSize.value);
+      if (!total || !size){ packPreview.textContent=''; return; }
+      const whole = Math.floor(total / size);
+      const rem   = +(total - (whole * size)).toFixed(2);
+      const parts = whole + (rem > 0 ? 1 : 0);
+      const detail = rem > 0 ? `${whole}×${size}kg + 1×${rem}kg` : `${whole}×${size}kg`;
+      packPreview.textContent = `This will create ${parts} package(s): ${detail}.`;
+    }
+    selPackSize.addEventListener('change', updatePackPreview);
+
+    /* ---------- TABLE 2: Product List (DB-backed) ---------- */
+    const prodTbody = document.querySelector('#tbl-product-list tbody');
+
+    function productRowHTML(p){
+      // keep weight available for printing via data attr
+      return `
+        <tr data-pid="${p.product_id}" data-weight="${fmt2(p.weight_kg ?? 0)}">
+          <td>${p.product_id}</td>
+          <td>${p.batch_code}</td>
+          <td>${p.product_name}</td>
+          <td>
+            <div class="actions-inline">
+              <button class="btn sm outline act-print">Print</button>
+              <button class="btn sm danger act-delete">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    async function loadProducts(){
+      prodTbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+      try{
+        const j = await fetchJSON('api/product-list-list.php');
+        if(!j.ok) throw new Error(j.error || 'Load failed');
+        const list = Array.isArray(j.data) ? j.data : [];
+        prodTbody.innerHTML = list.length
+          ? list.map(productRowHTML).join('')
+          : '<tr><td colspan="4">No products yet.</td></tr>';
+      }catch(err){
+        prodTbody.innerHTML = `<tr><td colspan="4">Failed to load.<div class="muted">${err.message}</div></td></tr>`;
+      }
+    }
+
+    // PACK -> create product entries in DB
+    packForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+
+      try{
+        const size = parseFloat(selPackSize.value);
+        const j = await fetchJSON('api/product-list-pack.php', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            batch_code: fldPackBatchCode.value,
+            size_kg: size,
+            replace_existing: 1
+          })
+        });
+        if(!j.ok) throw new Error(j.error || 'Pack failed');
+
+        // refresh product list from DB
+        await loadProducts();
+
+        // disable the pack button on that pushed row
+        const row = pushedTbody.querySelector(`tr[data-batch="${fldPackBatchCode.value}"]`);
+        if (row) { const btn = row.querySelector('.act-pack'); if (btn) { btn.disabled = true; btn.textContent = 'Packed'; } }
+
+        closeModal('modal-pack');
+        packForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    // Delete / Print actions in Product List
+    prodTbody.addEventListener('click', async e=>{
+      const row = e.target.closest('tr'); if(!row) return;
+      const pid = row.dataset.pid;
+
+      if (e.target.closest('.act-delete')) {
+        if(!confirm(`Delete ${pid}?`)) return;
+        try{
+          const j = await fetchJSON('api/product-list-delete.php', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ product_id: pid })
+          });
+          if(!j.ok) throw new Error(j.error || 'Delete failed');
+          row.remove();
+          if(!prodTbody.children.length){
+            prodTbody.innerHTML = '<tr><td colspan="4">No products yet.</td></tr>';
+          }
+        }catch(err){ alert(err.message); }
+        return;
+      }
+
+      if (e.target.closest('.act-print')) {
+        const cells = row.children;
+        const fmtDate = new Date().toISOString().slice(0,10);
+        document.getElementById('p_pid').textContent    = cells[0].textContent.trim();
+        document.getElementById('p_batch').textContent  = cells[1].textContent.trim();
+        document.getElementById('p_name').textContent   = cells[2].textContent.trim();
+        document.getElementById('p_weight').textContent = row.dataset.weight || '—';
+        document.getElementById('p_date').textContent   = fmtDate;
+
+        const card = document.getElementById('print-card').outerHTML;
+        const w = window.open('', '_blank', 'width=420,height=600');
+        w.document.write(`<html><head><title>Print Label</title></head><body>${card}<script>window.onload=()=>{window.print(); setTimeout(()=>window.close(), 300);}<\/script></body></html>`);
+        w.document.close();
+        return;
+      }
+    });
+
+    /* ---------- init ---------- */
+    loadPushedBatches();
+    loadProducts();
+  </script>
+</body>
+
+<script defer>
+(function () {
+  // current filename (e.g., 'inventory.html'); default dashboard
+  const here = (location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+
+  document.querySelectorAll('aside .nav a.nav-link').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    // compare only the file part of the href (strip folders and #hash)
+    const target = href.split('/').pop().split('#')[0].toLowerCase();
+
+    if (here === target || (here === '' && target === 'dashboard.html')) {
+      a.classList.add('active');
+    }
+  });
+}());
+</script>
+
+
+</html>

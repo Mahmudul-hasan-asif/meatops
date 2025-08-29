@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin – Storage & IoT</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* small helpers (theme is in styles.css) */
+    .hidden{display:none!important}
+    .msg{margin:.5rem 0;padding:.5rem .75rem;border-radius:.5rem;font-size:.9rem}
+    .msg.err{background:#2a0e0e;color:#ffdddd;border:1px solid #5a1a1a}
+    .chart-wrap{height:360px}
+    .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+    .row-click{cursor:pointer}
+  </style>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div><h1>MeatOps</h1><small>Admin Console</small></div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="intake.html" class="nav-link">Livestock / Intake</a>
+      <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+      <a href="quality-control.html" class="nav-link">Quality Control</a>
+      <a href="waste-management.html" class="nav-link">Waste Management</a>
+      <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+      <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+      <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+      <a href="suppliers.html" class="nav-link">Suppliers</a>
+      <a href="customers.html" class="nav-link">Customers</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </nav>
+    <footer class="sidebar-footer">v2.1</footer>
+  </aside>
+
+  <main class="main">
+    <header class="topbar"><div class="breadcrumbs"><span>Storage &amp; IoT</span></div></header>
+
+    <section class="page show" id="storage">
+      <!-- Chart + filters -->
+      <div class="card">
+        <div class="card-head" style="align-items:flex-start">
+          <div>
+            <h2>Cold Chain – Temperature &amp; Humidity (last 12h)</h2>
+            <small class="muted">
+              <span class="legend-dot" style="background:rgba(88,166,255,1)"></span>Temp (°C)
+              &nbsp;&nbsp;<span class="legend-dot" style="background:rgba(52,211,153,1)"></span>RH (%)
+            </small>
+          </div>
+          <div class="toolbar">
+            <label>Facility
+              <select id="sel-facility">
+                <option>Gazipur</option><option>Narayanganj</option><option>Savar</option><option>Chittagong</option><option>Sylhet</option>
+              </select>
+            </label>
+            <label>Device
+              <select id="sel-device"></select>
+            </label>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart" style="width:100%;height:100%"></canvas></div>
+      </div>
+
+      <!-- Device Status -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Device Status</h2>
+          <button class="btn primary open-modal" data-modal="modal-add">+ Add Device Status</button>
+        </div>
+        <div id="page-msg" class="msg err hidden"></div>
+        <div class="table-scroll">
+          <table class="table" id="tbl-devices">
+            <thead>
+              <tr>
+                <th>Device</th><th>Facility</th><th>Type</th>
+                <th>Humidity</th><th>Temp</th><th>Signal</th>
+                <th>Last Seen</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody><tr><td colspan="8">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-top:.5rem">Click a row to <strong>Check Status</strong> and log a reading.</p>
+      </div>
+
+      <!-- Latest Sensor Readings -->
+      <div class="card">
+        <div class="card-head"><h2>Latest Sensor Readings</h2></div>
+        <div class="table-scroll">
+          <table class="table" id="tbl-readings">
+            <thead>
+              <tr>
+                <th>Timestamp</th><th>Facility</th><th>Device</th>
+                <th>Metric</th><th>Reading</th><th>Units</th><th>Checked By</th>
+              </tr>
+            </thead>
+            <tbody><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <!-- Add Device Status -->
+  <div class="modal" id="modal-add" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Device Status</h3><button class="icon close-modal">✕</button></div>
+      <form id="form-add" class="form" novalidate>
+        <div class="two">
+          <label>Facility
+            <select id="add-facility" required>
+              <option>Gazipur</option><option>Narayanganj</option><option>Savar</option><option>Chittagong</option><option>Sylhet</option>
+            </select>
+          </label>
+          <label>Device
+            <select id="add-device" required></select>
+          </label>
+        </div>
+        <div class="two">
+          <label>Type
+            <select id="add-type" required>
+              <option value="TEMP">Temperature Sensor</option>
+              <option value="RH">Humidity Sensor</option>
+              <option value="TEMP/RH">Temp &amp; Humidity</option>
+              <option value="DOOR">Door Sensor</option>
+              <option value="POWER">Power Sensor</option>
+              <option value="CO2">CO₂ Sensor</option>
+              <option value="GATEWAY">Gateway</option>
+            </select>
+          </label>
+          <label>Signal (%) <input id="add-signal" type="number" min="0" max="100"></label>
+        </div>
+        <div class="two">
+          <label id="grp-add-humidity" class="hidden">Humidity (%) <input id="add-humidity" type="number" step="0.1" min="0" max="100"></label>
+          <label id="grp-add-temp" class="hidden">Temp (°C) <input id="add-temp" type="number" step="0.1"></label>
+        </div>
+        <div class="two">
+          <label>Check Status
+            <select id="add-status" required>
+              <option>OK</option><option>Check</option><option>Open</option>
+              <option>High Temp</option><option>Low Temp</option><option>Door Open</option>
+            </select>
+          </label>
+          <label>Last Seen <input id="add-lastseen" type="datetime-local" required></label>
+        </div>
+        <div id="add-msg" class="msg err hidden"></div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="button" id="save-device-status">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Check Status / Log Reading -->
+  <div class="modal" id="modal-check" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Check Status &amp; Log Reading</h3><button class="icon close-modal">✕</button></div>
+      <form id="form-check" class="form" novalidate>
+        <div class="two">
+          <label>Facility
+            <select id="check-facility" required>
+              <option>Gazipur</option><option>Narayanganj</option><option>Savar</option><option>Chittagong</option><option>Sylhet</option>
+            </select>
+          </label>
+          <label>Device
+            <select id="check-device" required></select>
+          </label>
+        </div>
+        <div class="two">
+          <label>Metric
+            <select id="check-metric" required>
+              <option value="TEMP">Temperature (°C)</option>
+              <option value="RH">Humidity (%)</option>
+              <option value="DOOR">Door State</option>
+              <option value="POWER">Power (V)</option>
+              <option value="CO2">CO₂ (ppm)</option>
+            </select>
+          </label>
+          <label id="grp-read-num">Reading <input id="check-reading" type="number" step="0.1" required></label>
+          <label id="grp-read-door" class="hidden">Door
+            <select id="check-door"><option value="1">Open</option><option value="0">Closed</option></select>
+          </label>
+        </div>
+        <div class="two">
+          <label>Check Status
+            <select id="check-status" required>
+              <option>OK</option><option>Check</option><option>Open</option>
+              <option>High Temp</option><option>Low Temp</option><option>Door Open</option>
+            </select>
+          </label>
+          <label>Checked By <input id="check-by" placeholder="Operator"></label>
+        </div>
+        <div class="two">
+          <label>Timestamp <input id="check-time" type="datetime-local" required></label>
+          <label>Notes <input id="check-notes" placeholder="Optional"></label>
+        </div>
+        <div id="check-msg" class="msg err hidden"></div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="button" id="save-check">Save &amp; Log</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Modal helpers (same pattern as your other pages) ---------- */
+    document.querySelectorAll('.modal').forEach(m => m.setAttribute('aria-hidden','true'));
+    function openModal(id){
+      const m = document.getElementById(id);
+      if(m){ m.setAttribute('aria-hidden','false'); document.body.classList.add('body-modal-open'); }
+    }
+    function closeModal(el){
+      const m = el.closest?.('.modal') || (typeof el==='string' ? document.getElementById(el) : null);
+      if(!m) return;
+      m.setAttribute('aria-hidden','true');
+      const anyOpen = Array.from(document.querySelectorAll('.modal')).some(x=>x.getAttribute('aria-hidden')==='false');
+      if(!anyOpen) document.body.classList.remove('body-modal-open');
+    }
+    document.addEventListener('click', e=>{
+      if(e.target.matches('.open-modal')) openModal(e.target.dataset.modal);
+      if(e.target.matches('.close-modal,[data-cancel]')) closeModal(e.target);
+      if(e.target.classList.contains('modal')) closeModal(e.target);
+    });
+
+    /* ---------- Endpoints ---------- */
+    const API = {
+      listDeviceStatus: 'api/device-status-list.php',
+      createDeviceStatus: 'api/device-status-create.php',
+      listReadings: 'api/reading-list.php',
+      createReading: 'api/reading-create.php',
+      timeseries: 'api/sensor-timeseries.php'
+    };
+
+    /* ---------- Utilities ---------- */
+    const DEVICES = ['RX-201','RX-202','RX-203','RX-204','RX-205','RX-206','RX-207','RX-208','RX-209','RX-210'];
+    const nowLocal = () => new Date().toISOString().slice(0,16);
+    const asLocal = s => (s||'').toString().replace('T',' ').replace('Z','');
+    function showMsg(id, text){ const el=document.getElementById(id); if(!el) return; if(text){ el.textContent=text; el.classList.remove('hidden'); } else { el.classList.add('hidden'); } }
+    async function fetchJSON(url, opts={}){
+      let res, text;
+      try{ res = await fetch(url, opts); }catch(e){ console.error('fetch failed', e); throw new Error('Network error: '+e.message); }
+      try{ text = await res.text(); const j = JSON.parse(text); return j; }
+      catch(e){ console.error('JSON parse failed', e, text); throw new Error('Server returned non-JSON: '+text?.slice(0,200)); }
+    }
+
+    /* ---------- Chart ---------- */
+    let lineChart;
+    function renderChart(labels=[], temp=[], rh=[]){
+      const ctx = document.getElementById('chart').getContext('2d');
+      if(lineChart) lineChart.destroy();
+      lineChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [
+          { label:'Temp (°C)', data:temp, borderColor:'rgba(88,166,255,1)', backgroundColor:'rgba(88,166,255,.2)', fill:false, tension:.3, pointRadius:2, yAxisID:'y1' },
+          { label:'RH (%)',   data:rh,   borderColor:'rgba(52,211,153,1)', backgroundColor:'rgba(52,211,153,.2)', fill:false, tension:.3, pointRadius:2, yAxisID:'y2' }
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false,
+          scales:{ y1:{type:'linear',position:'left'}, y2:{type:'linear',position:'right',grid:{drawOnChartArea:false},beginAtZero:true} },
+          plugins:{ legend:{display:false} }
+        }
+      });
+    }
+    async function loadTimeseries(){
+      try{
+        const f = encodeURIComponent(document.getElementById('sel-facility').value||'');
+        const d = encodeURIComponent(document.getElementById('sel-device').value||'');
+        const j = await fetchJSON(`${API.timeseries}?facility=${f}&device=${d}&hours=12`);
+        if(j.ok){ renderChart(j.labels||[], j.temp||[], j.rh||[]); return; }
+        showMsg('page-msg', j.error || 'Timeseries failed');
+      }catch(e){ showMsg('page-msg', e.message); }
+    }
+
+    /* ---------- Dynamic fields ---------- */
+    function updateAddType(){
+      const t = document.getElementById('add-type').value;
+      const gH = document.getElementById('grp-add-humidity');
+      const gT = document.getElementById('grp-add-temp');
+      const inH = document.getElementById('add-humidity');
+      const inT = document.getElementById('add-temp');
+      gH.classList.add('hidden'); gT.classList.add('hidden'); inH.required=false; inT.required=false;
+      if(t==='TEMP'){ gT.classList.remove('hidden'); inT.required=true; }
+      else if(t==='RH'){ gH.classList.remove('hidden'); inH.required=true; }
+      else if(t==='TEMP/RH'){ gT.classList.remove('hidden'); gH.classList.remove('hidden'); }
+    }
+    function updateCheckMetric(){
+      const m = document.getElementById('check-metric').value;
+      const grpNum = document.getElementById('grp-read-num');
+      const grpDoor = document.getElementById('grp-read-door');
+      const num = document.getElementById('check-reading');
+      grpNum.classList.add('hidden'); grpDoor.classList.add('hidden'); num.required=false;
+      if(m==='DOOR'){ grpDoor.classList.remove('hidden'); }
+      else { grpNum.classList.remove('hidden'); num.required=true;
+        num.step = (m==='TEMP'||m==='POWER'||m==='CO2') ? '0.1' : '1';
+        num.placeholder = m==='TEMP' ? '°C' : m==='RH' ? '%' : m==='POWER' ? 'Volts' : 'ppm';
+      }
+    }
+
+    /* ---------- Tables ---------- */
+    let DEVICE_ROWS=[], READING_ROWS=[];
+    function drawDeviceTable(){
+      const tb = document.querySelector('#tbl-devices tbody');
+      if(!DEVICE_ROWS.length){ tb.innerHTML = '<tr><td colspan="8">No devices yet.</td></tr>'; return; }
+      tb.innerHTML = DEVICE_ROWS.map((r,i)=>`
+        <tr data-i="${i}">
+          <td>${r.device||''}</td><td>${r.facility||''}</td><td>${r.type||''}</td>
+          <td>${r.humidity ?? ''}</td><td>${r.temp ?? ''}</td><td>${(r.signal??'')!==''?r.signal+'%':''}</td>
+          <td>${(r.last_seen||'').replace('T',' ').replace('Z','')}</td><td>${r.status||''}</td>
+        </tr>`).join('');
+      tb.querySelectorAll('tr').forEach(tr=>{
+        tr.addEventListener('click', ()=>{
+          const r = DEVICE_ROWS[Number(tr.dataset.i)] || {};
+          document.getElementById('check-facility').value = r.facility || 'Gazipur';
+          document.getElementById('check-device').value   = r.device   || DEVICES[0];
+          const defMetric = (r.type||'').includes('RH') ? 'RH' : (r.type||'').includes('TEMP') ? 'TEMP' : 'DOOR';
+          document.getElementById('check-metric').value   = defMetric;
+          updateCheckMetric();
+          if(defMetric==='RH') document.getElementById('check-reading').value = r.humidity ?? '';
+          else if(defMetric==='TEMP') document.getElementById('check-reading').value = r.temp ?? '';
+          else document.getElementById('check-reading').value = '';
+          document.getElementById('check-status').value   = 'OK';
+          document.getElementById('check-by').value       = '';
+          document.getElementById('check-time').value     = nowLocal();
+          document.getElementById('check-notes').value    = '';
+          showMsg('check-msg',''); openModal('modal-check');
+        });
+      });
+    }
+    function drawReadingsTable(){
+      const tb = document.querySelector('#tbl-readings tbody');
+      if(!READING_ROWS.length){ tb.innerHTML = '<tr><td colspan="7" class="muted">No logged readings yet.</td></tr>'; return; }
+      tb.innerHTML = READING_ROWS.map(r=>`
+        <tr>
+          <td>${(r.timestamp||'').replace('T',' ').replace('Z','')}</td>
+          <td>${r.facility}</td><td>${r.device}</td><td>${r.metric}</td>
+          <td>${r.value}</td><td>${r.units||''}</td><td>${r.checked_by||'—'}</td>
+        </tr>`).join('');
+    }
+    async function loadDeviceStatus(){
+      try{
+        const j = await fetchJSON(API.listDeviceStatus);
+        if(j.ok && Array.isArray(j.data)) DEVICE_ROWS = j.data; else throw new Error(j.error||'Load failed');
+        drawDeviceTable();
+      }catch(e){ showMsg('page-msg', e.message); console.error(e); }
+    }
+    async function loadReadings(){
+      try{
+        const j = await fetchJSON(`${API.listReadings}?hours=24&limit=100`);
+        if(j.ok && Array.isArray(j.data)) READING_ROWS = j.data; else throw new Error(j.error||'Load failed');
+        drawReadingsTable();
+      }catch(e){ showMsg('page-msg', e.message); console.error(e); }
+    }
+
+    /* ---------- Save handlers (only close on success) ---------- */
+    function validateAdd(){
+      const type = document.getElementById('add-type').value;
+      const temp = document.getElementById('add-temp').value;
+      const hum  = document.getElementById('add-humidity').value;
+      if(type==='TEMP' && temp==='') return 'Temperature is required for Temperature Sensor';
+      if(type==='RH'   && hum==='')  return 'Humidity is required for Humidity Sensor';
+      return '';
+    }
+    document.getElementById('save-device-status').addEventListener('click', async ()=>{
+      showMsg('add-msg','');
+      const err = validateAdd(); if(err){ showMsg('add-msg', err); return; }
+      const payload = {
+        facility: document.getElementById('add-facility').value,
+        device:   document.getElementById('add-device').value,
+        type:     document.getElementById('add-type').value,
+        humidity: document.getElementById('add-humidity').value || null,
+        temp:     document.getElementById('add-temp').value || null,
+        signal:   document.getElementById('add-signal').value || null,
+        status:   document.getElementById('add-status').value,
+        last_seen:document.getElementById('add-lastseen').value || nowLocal()
+      };
+      try{
+        const j = await fetchJSON(API.createDeviceStatus, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+        });
+        if(!j.ok){ showMsg('add-msg', j.error || 'Save failed'); return; }
+        await loadDeviceStatus();
+        closeModal(document.getElementById('modal-add'));
+      }catch(e){ showMsg('add-msg', e.message); console.error(e); }
+    });
+
+    document.getElementById('save-check').addEventListener('click', async ()=>{
+      showMsg('check-msg','');
+      const metric = document.getElementById('check-metric').value;
+      let value, units;
+      if(metric==='DOOR'){ value = Number(document.getElementById('check-door').value); units='state'; }
+      else if(metric==='POWER'){ value = Number(document.getElementById('check-reading').value); units='V'; }
+      else if(metric==='CO2'){ value = Number(document.getElementById('check-reading').value); units='ppm'; }
+      else if(metric==='RH'){ value = Number(document.getElementById('check-reading').value); units='%'; }
+      else { value = Number(document.getElementById('check-reading').value); units='°C'; }
+      if((metric!=='DOOR') && isNaN(value)){ showMsg('check-msg','Please enter a valid reading'); return; }
+
+      const payload = {
+        timestamp: document.getElementById('check-time').value || nowLocal(),
+        facility:  document.getElementById('check-facility').value,
+        device:    document.getElementById('check-device').value,
+        metric, value, units,
+        checked_by:document.getElementById('check-by').value,
+        status:    document.getElementById('check-status').value,
+        notes:     document.getElementById('check-notes').value || null
+      };
+      try{
+        const j = await fetchJSON(API.createReading, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+        });
+        if(!j.ok){ showMsg('check-msg', j.error || 'Save failed'); return; }
+        await loadReadings();
+        await loadTimeseries();
+        closeModal(document.getElementById('modal-check'));
+      }catch(e){ showMsg('check-msg', e.message); console.error(e); }
+    });
+
+    /* ---------- Init ---------- */
+    (function init(){
+      const opts = DEVICES.map((d,i)=>`<option ${i===0?'selected':''}>${d}</option>`).join('');
+      document.getElementById('sel-device').innerHTML = opts;
+      document.getElementById('add-device').innerHTML = opts;
+      document.getElementById('check-device').innerHTML = opts;
+      document.getElementById('add-lastseen').value = nowLocal();
+      document.getElementById('check-time').value   = nowLocal();
+
+      document.getElementById('add-type').addEventListener('change', updateAddType);
+      document.getElementById('check-metric').addEventListener('change', updateCheckMetric);
+      updateAddType(); updateCheckMetric();
+
+      document.getElementById('sel-facility').addEventListener('change', loadTimeseries);
+      document.getElementById('sel-device').addEventListener('change', loadTimeseries);
+
+      loadDeviceStatus();
+      loadReadings();
+      loadTimeseries();
+
+      // highlight nav
+      const here=(location.pathname.split('/').pop()||'storage.html').toLowerCase();
+      document.querySelectorAll('aside .nav a.nav-link').forEach(a=>{
+        const target=(a.getAttribute('href')||'').split('/').pop().split('#')[0].toLowerCase();
+        if(here===target) a.classList.add('active');
+      });
+    })();
+  </script>
+</body>
+</html>

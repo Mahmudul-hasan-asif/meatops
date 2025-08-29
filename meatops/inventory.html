@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin - Inventory</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div>
+        <h1>MeatOps</h1>
+        <small>Admin Console</small>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="intake.html" class="nav-link">Livestock / Intake</a>
+      <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+      <a href="quality-control.html" class="nav-link">Quality Control</a>
+      <a href="waste-management.html" class="nav-link">Waste Management</a>
+      <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+      <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+      <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+      <a href="suppliers.html" class="nav-link">Suppliers</a>
+      <a href="customers.html" class="nav-link">Customers</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+</nav>
+    <footer class="sidebar-footer">v1.8</footer>
+  </aside>
+
+  <main class="main">
+    <!-- HEADER -->
+    <header class="topbar">
+      <div class="breadcrumbs"><span>Inventory</span></div>
+    </header>
+
+    <!-- INVENTORY -->
+    <section class="page show" id="inventory">
+      <div class="stack inv-split">
+        <!-- Products -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Products</h2>
+            <div class="toolbar">
+              <input type="text" id="search-name" placeholder="Search by name" />
+              <input type="number" id="search-id" placeholder="ID" />
+              <div class="shelf-filter">
+                <select id="search-shelf-op" title="Shelf life comparator">
+                  <option value="eq">=</option>
+                  <option value="ge">≥</option>
+                  <option value="le">≤</option>
+                </select>
+                <input type="number" id="search-shelf" placeholder="Shelf life (days)" />
+              </div>
+              <button class="btn outline" id="btn-search">Search</button>
+              <button class="btn" id="btn-reset">Reset</button>
+              <button class="btn primary open-modal" data-modal="modal-product-create">+ Add Product</button>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table" id="tbl-products">
+              <thead>
+                <tr>
+                  <th>Product name</th>
+                  <th>Product ID</th>
+                  <th>Price</th>
+                  <th>Quantity</th>
+                  <th>Sale</th>
+                  <th>Shelf Life</th>
+                  <th>Start date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Batches by Facility -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Batches by Facility</h2>
+            <button class="btn open-modal" data-modal="modal-bf-create">+ Add Lot to Facility</button>
+          </div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-inventory-batches">
+              <thead>
+                <tr>
+                  <th>Lot/Batch</th>
+                  <th>Product</th>
+                  <th>Facility + Bin</th>
+                  <th>Qty (Avail/Total)</th>
+                  <th>Expiry</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <!-- ===== MODALS: PRODUCTS ===== -->
+  <div class="modal" id="modal-product-create" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Product</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-product-create">
+        <label>Product name <input name="product_name" required></label>
+        <label>Price <input name="price" type="number" step="0.01" required></label>
+        <label>Quantity <input name="quantity" type="number" required></label>
+        <label>Sale
+          <select name="sale">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </label>
+        <label>Shelf life (days) <input name="shelf_life" type="number" min="0" required></label>
+        <label>Start date <input name="start_date" type="date" required></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-product-edit" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Edit Product</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-product-edit">
+        <input type="hidden" name="product_id" />
+        <label>Product name <input name="product_name" required></label>
+        <label>Price <input name="price" type="number" step="0.01" required></label>
+        <label>Quantity <input name="quantity" type="number" required></label>
+        <label>Sale
+          <select name="sale">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </label>
+        <label>Shelf life (days) <input name="shelf_life" type="number" min="0" required></label>
+        <label>Start date <input name="start_date" type="date" required></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== MODALS: BATCHES BY FACILITY ===== -->
+  <div class="modal" id="modal-bf-create" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Lot to Facility</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-bf-create">
+        <div class="two">
+          <label>Batch ID <input name="batch_id" type="number" required></label>
+          <label>Product ID <input name="product_id" type="number" required></label>
+        </div>
+        <div class="two">
+          <label>Facility ID <input name="facility_id" type="number" required></label>
+          <label>Bin/Location <input name="location_bin" placeholder="A-03-R2-B15"></label>
+        </div>
+        <div class="two">
+          <label>On Hand (kg) <input name="qty_on_hand_kg" type="number" step="0.01" required></label>
+          <label>Reserved (kg) <input name="qty_reserved_kg" type="number" step="0.01" value="0"></label>
+        </div>
+        <div class="two">
+          <label>Expiry Date <input name="expiry_date" type="date" required></label>
+          <label>Status
+            <select name="status">
+              <option value="available">available</option>
+              <option value="allocated">allocated</option>
+              <option value="on_hold">on_hold</option>
+              <option value="expired">expired</option>
+            </select>
+          </label>
+        </div>
+        <label>Lot Code <input name="lot_code" placeholder="optional (auto if blank)"></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-bf-edit" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Edit Lot in Facility</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-bf-edit">
+        <input type="hidden" name="id" />
+        <div class="two">
+          <label>Facility ID <input name="facility_id" type="number" required></label>
+          <label>Bin/Location <input name="location_bin"></label>
+        </div>
+        <div class="two">
+          <label>On Hand (kg) <input name="qty_on_hand_kg" type="number" step="0.01" required></label>
+          <label>Reserved (kg) <input name="qty_reserved_kg" type="number" step="0.01" required></label>
+        </div>
+        <div class="two">
+          <label>Expiry Date <input name="expiry_date" type="date" required></label>
+          <label>Status
+            <select name="status">
+              <option value="available">available</option>
+              <option value="allocated">allocated</option>
+              <option value="on_hold">on_hold</option>
+              <option value="expired">expired</option>
+            </select>
+          </label>
+        </div>
+        <label>Lot Code <input name="lot_code"></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-bf-move" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Move / Split Lot</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-bf-move">
+        <input type="hidden" name="source_id" />
+        <div class="two">
+          <label>Qty to move (kg) <input name="qty" type="number" step="0.01" required></label>
+          <label>Target Facility ID <input name="target_facility_id" type="number" required></label>
+        </div>
+        <label>Target Bin/Location <input name="target_location_bin" placeholder="A-03-R2-B15"></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Move / Split</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Modal helpers ---------- */
+    document.querySelectorAll('.modal').forEach(m=>m.setAttribute('aria-hidden','true'));
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.setAttribute('aria-hidden','false'); document.body.classList.add('body-modal-open'); } }
+    function closeModal(el){ const m=el.closest?.('.modal') || (typeof el==='string' ? document.getElementById(el) : null); if(!m) return; m.setAttribute('aria-hidden','true'); if(![...document.querySelectorAll('.modal')].some(x=>x.getAttribute('aria-hidden')==='false')) document.body.classList.remove('body-modal-open'); }
+    document.addEventListener('click', e=>{ if(e.target.matches('.open-modal')) openModal(e.target.dataset.modal); if(e.target.matches('.close-modal,[data-cancel]')) closeModal(e.target); if(e.target.classList.contains('modal')) closeModal(e.target); });
+
+    /* ---------- Products CRUD + Search ---------- */
+    const productsTbody = document.querySelector('#tbl-products tbody');
+    const createForm = document.querySelector('#form-product-create');
+    const editForm = document.querySelector('#form-product-edit');
+
+    const inpSearchName  = document.getElementById('search-name');
+    const inpSearchId    = document.getElementById('search-id');
+    const selShelfOp     = document.getElementById('search-shelf-op');
+    const inpSearchShelf = document.getElementById('search-shelf');
+    const btnSearch = document.getElementById('btn-search');
+    const btnReset  = document.getElementById('btn-reset');
+
+    let PRODUCTS_CACHE = [];
+
+    function money(v){ return Number(v).toFixed(2); }
+    function rowHTML(p){
+      return `
+        <tr data-id="${p.product_id}">
+          <td>${p.product_name ?? ''}</td>
+          <td>${p.product_id}</td>
+          <td>${money(p.price)}</td>
+          <td>${p.quantity}</td>
+          <td>${p.sale==1 ? 'Yes':'No'}</td>
+          <td>${(p.shelf_life ?? 0)} days</td>
+          <td>${p.start_date ?? ''}</td>
+          <td>
+            <div class="actions-inline">
+              <button class="btn sm outline act-edit">Edit</button>
+              <button class="btn sm danger act-delete">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    function renderProducts(arr){
+      if(!arr || !arr.length){
+        productsTbody.innerHTML = '<tr><td colspan="8">No products found.</td></tr>';
+        return;
+      }
+      productsTbody.innerHTML = arr.map(rowHTML).join('');
+    }
+
+    async function loadProducts(){
+      productsTbody.innerHTML = '<tr><td colspan="8">Loading…</td></tr>';
+      try{
+        const res = await fetch('api/products-list.php');
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error || 'Load error');
+        PRODUCTS_CACHE = Array.isArray(json.data) ? json.data : [];
+        renderProducts(PRODUCTS_CACHE);
+      }catch(err){
+        productsTbody.innerHTML = '<tr><td colspan="8">Failed to load.</td></tr>';
+        console.error(err);
+      }
+    }
+
+    function applyProductSearch(){
+      let list = PRODUCTS_CACHE.slice();
+      const name  = (inpSearchName.value || '').trim().toLowerCase();
+      const idStr = (inpSearchId.value || '').trim();
+      const shelfStr = (inpSearchShelf.value || '').trim();
+      const op = selShelfOp.value || 'eq';
+
+      if(idStr !== ''){
+        const id = parseInt(idStr, 10);
+        if(!isNaN(id)) list = list.filter(p => p.product_id === id);
+        return renderProducts(list);
+      }
+
+      if(name) list = list.filter(p => (p.product_name || '').toLowerCase().includes(name));
+
+      if(shelfStr !== ''){
+        const sh = parseInt(shelfStr, 10);
+        if(!isNaN(sh)) {
+          list = list.filter(p => {
+            const v = parseInt(p.shelf_life || 0, 10);
+            if(op === 'ge') return v >= sh;
+            if(op === 'le') return v <= sh;
+            return v === sh;
+          });
+        }
+      }
+
+      renderProducts(list);
+    }
+
+    btnSearch.addEventListener('click', applyProductSearch);
+    btnReset.addEventListener('click', ()=>{
+      inpSearchName.value = '';
+      inpSearchId.value = '';
+      inpSearchShelf.value = '';
+      selShelfOp.value = 'eq';
+      renderProducts(PRODUCTS_CACHE);
+    });
+    [inpSearchName, inpSearchId, inpSearchShelf].forEach(el=>{
+      el.addEventListener('keydown', e=>{
+        if(e.key === 'Enter'){ e.preventDefault(); applyProductSearch(); }
+      });
+    });
+
+    createForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(createForm).entries());
+      try{
+        const res = await fetch('api/product-create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error || 'Create failed');
+        PRODUCTS_CACHE.unshift(json.data);
+        applyProductSearch();
+        closeModal(createForm);
+        createForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    productsTbody.addEventListener('click', async e=>{
+      const row = e.target.closest('tr'); if(!row) return;
+      const id = row.dataset.id;
+
+      if(e.target.closest('.act-edit')){
+        const c=row.children;
+        editForm.product_id.value   = id;
+        editForm.product_name.value = c[0].textContent.trim();
+        editForm.price.value        = c[2].textContent.trim();
+        editForm.quantity.value     = c[3].textContent.trim();
+        editForm.sale.value         = (c[4].textContent.trim()==='Yes' ? '1':'0');
+        editForm.shelf_life.value   = c[5].textContent.replace(' days','').trim();
+        editForm.start_date.value   = c[6].textContent.trim();
+        openModal('modal-product-edit');
+      }
+
+      if(e.target.closest('.act-delete')){
+        if(!confirm('Delete this product?')) return;
+        try{
+          const res = await fetch('api/product-delete.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:id})});
+          const json = await res.json();
+          if(!json.ok) throw new Error(json.error || 'Delete failed');
+          PRODUCTS_CACHE = PRODUCTS_CACHE.filter(p => String(p.product_id) !== String(id));
+          applyProductSearch();
+        }catch(err){ alert(err.message); }
+      }
+    });
+
+    editForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(editForm).entries());
+      try{
+        const res = await fetch('api/product-update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error || 'Update failed');
+        const idx = PRODUCTS_CACHE.findIndex(p => String(p.product_id) === String(data.product_id));
+        if(idx > -1) PRODUCTS_CACHE[idx] = json.data;
+        applyProductSearch();
+        closeModal(editForm);
+        editForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    /* ---------- Batches by Facility ---------- */
+    const bfTbody = document.querySelector('#tbl-inventory-batches tbody');
+    const bfCreateForm = document.getElementById('form-bf-create');
+    const bfEditForm   = document.getElementById('form-bf-edit');
+    const bfMoveForm   = document.getElementById('form-bf-move');
+
+    function daysLeft(dateStr){
+      if(!dateStr) return null;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const d = new Date(dateStr+"T00:00:00");
+      return Math.ceil((d - today) / (1000*60*60*24));
+    }
+    function expiryHTML(dateStr){
+      const dleft = daysLeft(dateStr);
+      const cls = dleft==null ? 'badge' :
+        (dleft < 0 ? 'badge danger' : (dleft <= 3 ? 'badge warn' : 'badge ok'));
+      const txt = dleft==null ? '' : (dleft<0 ? `${Math.abs(dleft)} days ago` : `in ${dleft} days`);
+      return `<span class="${cls}">${dateStr}${txt?` • ${txt}`:''}</span>`;
+    }
+    function statusPill(st){
+      const map = {
+        available:'pill ok',
+        allocated:'pill info',
+        on_hold:'pill warn',
+        expired:'pill danger'
+      };
+      return `<span class="${map[st]||'pill'}">${st}</span>`;
+    }
+    function qtyFmt(n){ return Number(n||0).toFixed(2); }
+
+    function bfRowHTML(r){
+      const onHand   = Number(r.qty_on_hand_kg || 0);
+      const reserved = Number(r.qty_reserved_kg || 0);
+      const avail    = onHand;
+      const total    = onHand + reserved;
+
+      const lot = r.lot_code && r.lot_code.trim()!=='' ? r.lot_code : `B#${r.batch_id}`;
+      const facBin = `<div class="facility">${r.facility_name||''}</div><div class="bin">${r.location_bin||'-'}</div>`;
+
+      return `
+      <tr data-id="${r.bf_id}"
+          data-onhand="${onHand}"
+          data-reserved="${reserved}"
+          data-expiry="${r.expiry_date}">
+        <td>${lot}</td>
+        <td>${r.product_name||''}</td>
+        <td>${facBin}</td>
+        <td>${qtyFmt(avail)} / ${qtyFmt(total)} kg</td>
+        <td>${expiryHTML(r.expiry_date)}</td>
+        <td>${statusPill(r.status)}</td>
+        <td>
+          <div class="actions-inline">
+            <button class="btn sm danger act-bf-delete">Delete</button>
+            <button class="btn sm outline act-bf-edit">Edit</button>
+            <button class="btn sm outline act-bf-split">Split</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    async function loadBF(){
+      bfTbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+      try{
+        const res = await fetch('api/bf-list.php');
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error||'Load error');
+        if(!json.data.length){ bfTbody.innerHTML = '<tr><td colspan="7">No lots.</td></tr>'; return; }
+        bfTbody.innerHTML = json.data.map(bfRowHTML).join('');
+      }catch(err){
+        bfTbody.innerHTML = '<tr><td colspan="7">Failed to load.</td></tr>';
+        console.error(err);
+      }
+    }
+
+    // Create
+    bfCreateForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(bfCreateForm).entries());
+      try{
+        const res = await fetch('api/bf-create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error||'Create failed');
+        bfTbody.insertAdjacentHTML('afterbegin', bfRowHTML(json.data));
+        closeModal(bfCreateForm);
+        bfCreateForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    // Actions
+    bfTbody.addEventListener('click', async e=>{
+      const row = e.target.closest('tr'); if(!row) return;
+      const id = row.dataset.id;
+      const cells = row.children;
+
+      if(e.target.closest('.act-bf-edit')){
+        bfEditForm.id.value                = id;
+        bfEditForm.facility_id.value       = '';
+        bfEditForm.location_bin.value      = cells[2].querySelector('.bin')?.textContent.trim() || '';
+        bfEditForm.qty_on_hand_kg.value    = row.dataset.onhand || '';
+        bfEditForm.qty_reserved_kg.value   = row.dataset.reserved || '';
+        bfEditForm.expiry_date.value       = row.dataset.expiry || '';
+        bfEditForm.status.value            = 'available';
+        bfEditForm.lot_code.value          = cells[0].textContent.trim();
+        openModal('modal-bf-edit');
+      }
+
+      if(e.target.closest('.act-bf-delete')){
+        if(!confirm('Delete this lot from facility?')) return;
+        try{
+          const res = await fetch('api/bf-delete.php',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ id })
+          });
+          const json = await res.json();
+          if(!json.ok) throw new Error(json.error||'Delete failed');
+          row.remove();
+          if(!bfTbody.children.length){
+            bfTbody.innerHTML = '<tr><td colspan="7">No lots.</td></tr>';
+          }
+        }catch(err){ alert(err.message); }
+      }
+
+      if(e.target.closest('.act-bf-split')){
+        bfMoveForm.source_id.value = id;
+        bfMoveForm.qty.value = '';
+        bfMoveForm.target_facility_id.value = '';
+        bfMoveForm.target_location_bin.value = '';
+        openModal('modal-bf-move');
+      }
+    });
+
+    // Edit
+    bfEditForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(bfEditForm).entries());
+      try{
+        const res = await fetch('api/bf-update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error||'Update failed');
+        await loadBF();
+        closeModal(bfEditForm);
+        bfEditForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    // Move / Split
+    bfMoveForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(bfMoveForm).entries());
+      try{
+        const res = await fetch('api/bf-split.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error||'Operation failed');
+        await loadBF();
+        closeModal(bfMoveForm);
+        bfMoveForm.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+
+
+
+
+    // Init
+    loadProducts();
+    loadBF();
+  </script>
+</body>
+
+<script defer>
+(function () {
+  // current filename (e.g., 'inventory.html'); default dashboard
+  const here = (location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+
+  document.querySelectorAll('aside .nav a.nav-link').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    // compare only the file part of the href (strip folders and #hash)
+    const target = href.split('/').pop().split('#')[0].toLowerCase();
+
+    if (here === target || (here === '' && target === 'dashboard.html')) {
+      a.classList.add('active');
+    }
+  });
+}());
+</script>
+</html>

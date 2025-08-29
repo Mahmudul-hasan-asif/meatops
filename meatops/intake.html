@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin - Livestock Intake</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">🥩</div>
+    <div>
+      <h1>MeatOps</h1>
+      <small>Admin Console</small>
+    </div>
+  </div>
+
+  <!-- UNIFIED NAV -->
+  <nav class="nav">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="intake.html" class="nav-link active">Livestock / Intake</a>
+    <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+    <a href="inventory.html" class="nav-link">Inventory</a>
+    <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+    <a href="quality-control.html" class="nav-link">Quality Control</a>
+    <a href="waste-management.html" class="nav-link">Waste Management</a>
+    <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+    <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+    <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+    <a href="suppliers.html" class="nav-link">Suppliers</a>
+    <a href="customers.html" class="nav-link">Customers</a>
+    <a href="settings.html" class="nav-link">Settings</a>
+  </nav>
+
+  <footer class="sidebar-footer">v1.8</footer>
+</aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="breadcrumbs"><span id="crumb">Livestock / Intake</span></div>
+    </header>
+
+    <section class="page show" id="intake">
+      <div class="stack">
+        <!-- Animals -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Animals</h2>
+            <button class="btn primary open-modal" data-modal="modal-animal-create">+ Add Animal</button>
+          </div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-animals">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Species</th>
+                  <th>Category</th><!-- NEW -->
+                  <th>Origin Farm</th>
+                  <th>Arrival Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Processing Units -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Processing Units</h2>
+            <button class="btn primary open-modal" data-modal="modal-processing-create">+ Add Processing Unit</button>
+          </div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-processing">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Animal ID</th>
+                  <th>Cut Type</th>
+                  <th>Yield (kg)</th>
+                  <th>Loss/Byproduct (kg)</th>
+                  <th>Location</th>
+                  <th>Proc. Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Batches -->
+        <div class="card split">
+          <div class="card-head">
+            <h2>Batches</h2>
+            <button class="btn primary open-modal" data-modal="modal-batch-create">+ Add Batch</button>
+          </div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-batches">
+              <thead>
+                <tr>
+                  <th>Batch</th>
+                  <th>Proc. ID</th>
+                  <th>Product</th>
+                  <th>Qty (kg)</th>
+                  <th>Expire</th>
+                  <th>Facility</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Animals -->
+  <div class="modal" id="modal-animal-create" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Animal</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-animal-create">
+        <label>Species <input name="species" required></label>
+        <label>Category
+          <select name="category" required>
+            <option value="" disabled selected>Select category</option>
+            <option value="chicken">chicken</option>
+            <option value="beef">beef</option>
+            <option value="mutton">mutton</option>
+            <option value="turkey">turkey</option>
+            <option value="duck">duck</option>
+          </select>
+        </label>
+        <label>Origin Farm <input name="origin_farm"></label>
+        <label>Arrival Date <input name="arrival_date" type="date"></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-animal-edit" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Edit Animal</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-animal-edit">
+        <input type="hidden" name="animal_id">
+        <label>Species <input name="species" required></label>
+        <label>Category
+          <select name="category" required>
+            <option value="chicken">chicken</option>
+            <option value="beef">beef</option>
+            <option value="mutton">mutton</option>
+            <option value="turkey">turkey</option>
+            <option value="duck">duck</option>
+          </select>
+        </label>
+        <label>Origin Farm <input name="origin_farm"></label>
+        <label>Arrival Date <input name="arrival_date" type="date"></label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Processing -->
+  <div class="modal" id="modal-processing-create" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Processing Unit</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-processing-create">
+        <label>Animal ID <input name="animal_id" type="number" required></label>
+        <label>Cut Type <input name="cut_type" required placeholder="e.g., primal, offal, trim"></label>
+        <div class="two">
+          <label>Yield (kg) <input name="yield_kg" type="number" step="0.01" min="0" required></label>
+          <label>Loss/Byproduct (kg) <input name="loss_kg" type="number" step="0.01" min="0" value="0" required></label>
+        </div>
+        <label>Location <input name="location" placeholder="Processing floor / line / room"></label>
+        <div class="two">
+          <label>Processing Date <input name="processing_date" type="date" required></label>
+          <label>Status
+            <select name="status" required>
+              <option value="completed">completed</option>
+              <option value="pending">pending</option>
+              <option value="qc_hold">qc_hold</option>
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-processing-edit" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Edit Processing Unit</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-processing-edit">
+        <input type="hidden" name="id">
+        <label>Animal ID <input name="animal_id" type="number" required></label>
+        <label>Cut Type <input name="cut_type" required></label>
+        <div class="two">
+          <label>Yield (kg) <input name="yield_kg" type="number" step="0.01" min="0" required></label>
+          <label>Loss/Byproduct (kg) <input name="loss_kg" type="number" step="0.01" min="0" required></label>
+        </div>
+        <label>Location <input name="location"></label>
+        <div class="two">
+          <label>Processing Date <input name="processing_date" type="date" required></label>
+          <label>Status
+            <select name="status" required>
+              <option value="completed">completed</option>
+              <option value="pending">pending</option>
+              <option value="qc_hold">qc_hold</option>
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Batches -->
+  <div class="modal" id="modal-batch-create" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Add Batch</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-batch-create">
+        <div class="two">
+          <label>Batch ID <input name="batch_code" id="batch_code" readonly></label>
+          <label>Proc. ID
+            <input name="processing_id" id="batch_processing_id" list="processing_list" placeholder="Type or pick…" required>
+            <datalist id="processing_list"></datalist>
+          </label>
+        </div>
+        <div class="two">
+          <label>Quantity
+            <select name="qty_mode" id="batch_qty_mode" required>
+              <option value="half">Half of yield (50%)</option>
+              <option value="quarter">Quarter of yield (25%)</option>
+            </select>
+          </label>
+          <label>Calculated Qty (kg) <input id="batch_qty_calc" readonly></label>
+        </div>
+        <div class="two">
+          <label>Expire Date <input type="date" name="expire_date" id="batch_expire_date" required></label>
+          <label>Facility
+            <select name="facility" id="batch_facility" required>
+              <option value="Gazipur">Gazipur</option>
+              <option value="Narayanganj">Narayanganj</option>
+              <option value="Savar">Savar</option>
+              <option value="Chittagong">Chittagong</option>
+              <option value="Sylhet">Sylhet</option>
+            </select>
+          </label>
+        </div>
+        <div id="batch_proc_hint" class="muted"></div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-batch-edit" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Edit Batch</h3><button class="icon close-modal">✕</button></div>
+      <form class="form" id="form-batch-edit">
+        <input type="hidden" id="edit_id">
+        <div class="two">
+          <label>Batch ID <input name="batch_code" id="edit_batch_code" readonly></label>
+          <label>Proc. ID
+            <input name="processing_id" id="edit_processing_id" list="processing_list" placeholder="Type or pick…" required>
+          </label>
+        </div>
+        <div class="two">
+          <label>Quantity
+            <select name="qty_mode" id="edit_qty_mode" required>
+              <option value="half">Half of yield (50%)</option>
+              <option value="quarter">Quarter of yield (25%)</option>
+            </select>
+          </label>
+          <label>Calculated Qty (kg) <input id="edit_qty_calc" readonly></label>
+        </div>
+        <div class="two">
+          <label>Expire Date <input type="date" name="expire_date" id="edit_expire_date" required></label>
+          <label>Facility
+            <select name="facility" id="edit_facility" required>
+              <option value="Gazipur">Gazipur</option>
+              <option value="Narayanganj">Narayanganj</option>
+              <option value="Savar">Savar</option>
+              <option value="Chittagong">Chittagong</option>
+              <option value="Sylhet">Sylhet</option>
+            </select>
+          </label>
+        </div>
+        <div id="edit_proc_hint" class="muted"></div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Modal helpers ---------- */
+    function openModal(id){const m=document.getElementById(id);if(m){m.setAttribute('aria-hidden','false');document.body.classList.add('body-modal-open');}}
+    function closeModal(el){const modal=typeof el==='string'?document.getElementById(el):el.closest('.modal');if(!modal)return;modal.setAttribute('aria-hidden','true');if(![...document.querySelectorAll('.modal')].some(x=>x.getAttribute('aria-hidden')==='false')){document.body.classList.remove('body-modal-open');}}
+    document.querySelectorAll('.open-modal').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.modal;if(id==='modal-batch-create') primeBatchModal();openModal(id);}));
+    document.addEventListener('click',e=>{if(e.target.matches('.close-modal,[data-cancel]')) closeModal(e.target);if(e.target.classList.contains('modal')) closeModal(e.target);});
+
+    /* ---------- Safe JSON fetch ---------- */
+    async function fetchJSON(url, options={}){const res=await fetch(url,options);const t=await res.text();try{return JSON.parse(t);}catch{throw new Error('Server returned non-JSON. Preview: '+t.slice(0,300));}}
+
+    /* ---------- Animals (with Category) ---------- */
+    const animalsTbody=document.querySelector('#tbl-animals tbody');
+    const formCreate=document.getElementById('form-animal-create');
+    const formEdit=document.getElementById('form-animal-edit');
+
+    function animalRowHTML(a){
+      return `
+        <tr data-id="${a.animal_id}">
+          <td>${a.animal_id}</td>
+          <td>${a.species ?? ''}</td>
+          <td>${a.category ?? ''}</td>
+          <td>${a.origin_farm ?? ''}</td>
+          <td>${a.arrival_date ?? ''}</td>
+          <td>
+            <div class="actions-inline">
+              <button class="btn sm outline act-edit">Edit</button>
+              <button class="btn sm danger act-delete">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    async function loadAnimals(){
+      animalsTbody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+      try{
+        const j = await fetchJSON('api/animals-list.php');
+        if(!j.ok) throw new Error(j.error || 'Load failed');
+        const list = Array.isArray(j.data) ? j.data : [];
+        animalsTbody.innerHTML = list.length
+          ? list.map(animalRowHTML).join('')
+          : '<tr><td colspan="6">No animals found.</td></tr>';
+      }catch(err){
+        animalsTbody.innerHTML = `<tr><td colspan="6">Failed to load.<div class="muted">${err.message}</div></td></tr>`;
+      }
+    }
+
+    // Create
+    formCreate.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(formCreate).entries());
+      try{
+        const j = await fetchJSON('api/animal-create.php',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(data)
+        });
+        if(!j.ok) throw new Error(j.error || 'Create failed');
+        animalsTbody.insertAdjacentHTML('afterbegin', animalRowHTML(j.data));
+        closeModal('modal-animal-create'); formCreate.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    // Row actions (Edit/Delete)
+    animalsTbody.addEventListener('click', async e=>{
+      const row = e.target.closest('tr'); if(!row) return;
+      const id  = row.dataset.id;
+
+      if(e.target.closest('.act-edit')){
+        const c = row.children;
+        formEdit.animal_id.value   = id;
+        formEdit.species.value     = c[1].textContent.trim();
+        formEdit.category.value    = c[2].textContent.trim().toLowerCase();
+        formEdit.origin_farm.value = c[3].textContent.trim();
+        formEdit.arrival_date.value= c[4].textContent.trim();
+        openModal('modal-animal-edit');
+      }
+
+      if(e.target.closest('.act-delete')){
+        if(!confirm('Delete this animal?')) return;
+        try{
+          const j = await fetchJSON('api/animal-delete.php',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ animal_id:id })
+          });
+          if(!j.ok) throw new Error(j.error || 'Delete failed');
+          row.remove();
+          if(!animalsTbody.children.length){
+            animalsTbody.innerHTML = '<tr><td colspan="6">No animals found.</td></tr>';
+          }
+        }catch(err){ alert(err.message); }
+      }
+    });
+
+    // Edit submit
+    formEdit.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(formEdit).entries());
+      try{
+        const j = await fetchJSON('api/animal-update.php',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(data)
+        });
+        if(!j.ok) throw new Error(j.error || 'Update failed');
+        await loadAnimals();
+        closeModal('modal-animal-edit'); formEdit.reset();
+      }catch(err){ alert(err.message); }
+    });
+
+    /* ---------- Processing Units ---------- */
+    const processingTbody=document.querySelector('#tbl-processing tbody');const formProcCreate=document.getElementById('form-processing-create');const formProcEdit=document.getElementById('form-processing-edit');let processingCache=new Map();
+    function fmt2(n){return Number(n??0).toFixed(2);}
+    function procRowHTML(r){return `<tr data-id="${r.id}"><td>${r.id}</td><td>${r.animal_id??''}</td><td>${r.cut_type??''}</td><td>${fmt2(r.yield_kg)}</td><td>${fmt2(r.loss_kg)}</td><td>${r.location??''}</td><td>${r.processing_date??''}</td><td>${r.status??''}</td><td><div class="actions-inline"><button class="btn sm outline act-edit">Edit</button><button class="btn sm danger act-delete">Delete</button></div></td></tr>`;}
+    async function loadProcessing(){processingTbody.innerHTML='<tr><td colspan="9">Loading…</td></tr>';try{const j=await fetchJSON('api/processing-list.php');if(!j.ok)throw new Error(j.error||'Load failed');const list=Array.isArray(j.data)?j.data:[];processingCache=new Map(list.map(r=>[String(r.id),r]));processingTbody.innerHTML=list.length?list.map(procRowHTML).join(''):'<tr><td colspan="9">No processing records found.</td></tr>';fillProcessingDatalist();}catch(err){processingTbody.innerHTML=`<tr><td colspan="9">Failed to load.<div class="muted">${err.message}</div></td></tr>`;}}
+    formProcCreate.addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(formProcCreate).entries());try{const j=await fetchJSON('api/processing-create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});if(!j.ok)throw new Error(j.error||'Create failed');processingCache.set(String(j.data.id),j.data);processingTbody.insertAdjacentHTML('afterbegin',procRowHTML(j.data));fillProcessingDatalist();closeModal('modal-processing-create');formProcCreate.reset();}catch(err){alert(err.message);}});
+    processingTbody.addEventListener('click',async e=>{const row=e.target.closest('tr');if(!row)return;const id=row.dataset.id;const c=row.children;if(e.target.closest('.act-edit')){formProcEdit.id.value=id;formProcEdit.animal_id.value=c[1].textContent.trim()||'';formProcEdit.cut_type.value=c[2].textContent.trim()||'';formProcEdit.yield_kg.value=c[3].textContent.trim()||'0';formProcEdit.loss_kg.value=c[4].textContent.trim()||'0';formProcEdit.location.value=c[5].textContent.trim()||'';formProcEdit.processing_date.value=c[6].textContent.trim()||'';formProcEdit.status.value=c[7].textContent.trim()||'pending';openModal('modal-processing-edit');}if(e.target.closest('.act-delete')){if(!confirm('Delete this processing record?'))return;try{const j=await fetchJSON('api/processing-delete.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});if(!j.ok)throw new Error(j.error||'Delete failed');processingCache.delete(String(id));row.remove();fillProcessingDatalist();if(!processingTbody.children.length){processingTbody.innerHTML='<tr><td colspan="9">No processing records found.</td></tr>';}}catch(err){alert(err.message);}}});
+    formProcEdit.addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(formProcEdit).entries());try{const j=await fetchJSON('api/processing-update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});if(!j.ok)throw new Error(j.error||'Update failed');await loadProcessing();closeModal('modal-processing-edit');formProcEdit.reset();}catch(err){alert(err.message);}});
+
+    /* ---------- Batches (DB) ---------- */
+    const batchesTbody=document.querySelector('#tbl-batches tbody');
+    const formBatchCreate=document.getElementById('form-batch-create');
+    const procInput=document.getElementById('batch_processing_id');
+    const selQtyMode=document.getElementById('batch_qty_mode');
+    const qtyCalcInput=document.getElementById('batch_qty_calc');
+    const batchCodeInput=document.getElementById('batch_code');
+    const expireInput=document.getElementById('batch_expire_date');
+    const facilityInput=document.getElementById('batch_facility');
+    const procHint=document.getElementById('batch_proc_hint');
+
+    const formBatchEdit=document.getElementById('form-batch-edit');
+    const editId=document.getElementById('edit_id');
+    const editBatchCode=document.getElementById('edit_batch_code');
+    const editProcInput=document.getElementById('edit_processing_id');
+    const editQtyMode=document.getElementById('edit_qty_mode');
+    const editQtyCalc=document.getElementById('edit_qty_calc');
+    const editExpire=document.getElementById('edit_expire_date');
+    const editFacility=document.getElementById('edit_facility');
+    const editProcHint=document.getElementById('edit_proc_hint');
+
+    const datalistEl=document.getElementById('processing_list');
+
+    function fillProcessingDatalist(){datalistEl.innerHTML='';const rows=[...processingCache.values()].sort((a,b)=>Number(b.id)-Number(a.id));for(const r of rows){const o=document.createElement('option');o.value=String(r.id);o.setAttribute('label',`#${r.id} • ${r.cut_type} • Yield ${fmt2(r.yield_kg)}kg • ${r.processing_date}`);datalistEl.appendChild(o);}}
+
+    function daysLeft(expireStr){if(!expireStr)return'';const t=new Date();t.setHours(0,0,0,0);const e=new Date(expireStr);const d=Math.round((e-t)/(1000*60*60*24));if(d<0)return`${Math.abs(d)}d ago (expired)`;if(d===0)return'expires today';return`${d}d left`;}
+    function getRecFromInput(el){const raw=(el.value||'').trim();const id=raw.startsWith('#')?raw.slice(1):raw;const num=parseInt(id,10);return processingCache.get(String(num));}
+    function qtyFrom(rec,mode){if(!rec)return 0;const base=Number(rec.yield_kg||0);return mode==='quarter'?base/4:base/2;}
+
+    function nextBatchCodeFromCache(){
+      const codes=[...batchesTbody.querySelectorAll('tr td:first-child')].map(td=>td.textContent.trim().split(' ')[0]).filter(s=>/^BCH-\d+$/.test(s)).map(s=>parseInt(s.split('-')[1],10));
+      const max=codes.length?Math.max(...codes):0;return `BCH-${String(max+1).padStart(3,'0')}`;
+    }
+    function primeBatchModal(){batchCodeInput.value=nextBatchCodeFromCache();procInput.value='';selQtyMode.value='half';qtyCalcInput.value='';expireInput.value='';facilityInput.value='Gazipur';procHint.textContent='';fillProcessingDatalist();}
+
+    function batchRowHTML(b){const pushed=Number(b.pushed)?' <span class="muted">• pushed</span>':'';return `<tr data-id="${b.id}"><td>${b.batch_code}${pushed}</td><td>${b.processing_id}</td><td>${b.product}</td><td>${fmt2(b.qty_kg)}</td><td>${b.expire_date} • ${daysLeft(b.expire_date)}</td><td>${b.facility}</td><td><div class="actions-inline"><button class="btn sm primary act-push"${Number(b.pushed)?' disabled':''}>${Number(b.pushed)?'Pushed':'Push'}</button><button class="btn sm outline act-edit">Edit</button><button class="btn sm danger act-delete">Delete</button></div></td></tr>`;}
+
+    async function loadBatches(){batchesTbody.innerHTML='<tr><td colspan="7">Loading…</td></tr>';try{const j=await fetchJSON('api/batch-list.php');if(!j.ok)throw new Error(j.error||'Load failed');const list=Array.isArray(j.data)?j.data:[];batchesTbody.innerHTML=list.length?list.map(batchRowHTML).join(''):'<tr><td colspan="7">No batches found.</td></tr>';}catch(err){batchesTbody.innerHTML=`<tr><td colspan="7">Failed to load.<div class="muted">${err.message}</div></td></tr>`;}}
+
+    function updateCreateQty(){const rec=getRecFromInput(procInput);if(!rec){qtyCalcInput.value='';procHint.textContent='';return;}qtyCalcInput.value=fmt2(qtyFrom(rec,selQtyMode.value));procHint.textContent=`Selected: #${rec.id} • ${rec.cut_type} • Yield ${fmt2(rec.yield_kg)}kg • Proc ${rec.processing_date}`;}
+    procInput.addEventListener('input',updateCreateQty);selQtyMode.addEventListener('change',updateCreateQty);
+
+    formBatchCreate.addEventListener('submit',async e=>{
+      e.preventDefault();
+      const code=batchCodeInput.value.trim();
+      const rec=getRecFromInput(procInput);if(!rec){alert('Please select a valid Processing ID.');return;}
+      const qty=qtyFrom(rec,selQtyMode.value);
+      const expDate=expireInput.value;
+      const facility=facilityInput.value;
+      try{
+        const j=await fetchJSON('api/batch-create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({batch_code:code,processing_id:rec.id,qty_kg:Number(qty),expire_date:expDate,facility})});
+        if(!j.ok)throw new Error(j.error||'Create failed');
+        batchesTbody.insertAdjacentHTML('afterbegin',batchRowHTML(j.data));
+        closeModal('modal-batch-create');formBatchCreate.reset();
+      }catch(err){alert(err.message);}
+    });
+
+    batchesTbody.addEventListener('click',async e=>{
+      const row=e.target.closest('tr');if(!row)return;const id=row.dataset.id;
+
+      if(e.target.closest('.act-push')){
+        try{
+          // 1) mark batch as pushed
+          const pushed = await fetchJSON('api/batch-update.php', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ id, pushed: 1 })
+          });
+          if(!pushed.ok) throw new Error(pushed.error || 'Push failed');
+
+          // 2) upsert into pushed_batches for Processing page
+          const sync = await fetchJSON('api/pushed-batch-upsert.php', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ batch_id: id })
+          });
+          if(!sync.ok) {
+            alert('Batch pushed, but failed to sync to pushed_batches: ' + (sync.error || 'Unknown error'));
+          }
+
+          // 3) update UI
+          row.outerHTML = batchRowHTML(pushed.data);
+
+        }catch(err){alert(err.message);}
+        return;
+      }
+
+      if(e.target.closest('.act-delete')){
+        if(!confirm('Delete this batch?')) return;
+        try{
+          const j=await fetchJSON('api/batch-delete.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+          if(!j.ok)throw new Error(j.error||'Delete failed');row.remove();
+          if(!batchesTbody.children.length){batchesTbody.innerHTML='<tr><td colspan="7">No batches found.</td></tr>';}
+        }catch(err){alert(err.message);}
+        return;
+      }
+
+      if(e.target.closest('.act-edit')){
+        const cells=row.children;
+        const recId=cells[1].textContent.trim();
+        editId.value=id; editBatchCode.value=cells[0].textContent.trim().split(' ')[0];
+        editProcessingId=recId; editProcInput.value=recId;
+        editExpire.value=cells[4].textContent.trim().split('•')[0].trim();
+        editFacility.value=cells[5].textContent.trim();
+        const pu=processingCache.get(String(recId));
+        const half=pu?Number(pu.yield_kg)/2:0; const qtr=pu?Number(pu.yield_kg)/4:0;
+        const currentQty=parseFloat(cells[3].textContent.trim())||0;
+        editQtyMode.value=(Math.abs(currentQty-qtr)<Math.abs(currentQty-half))?'quarter':'half';
+        editQtyCalc.value=fmt2(editQtyMode.value==='quarter'?qtr:half);
+        editProcHint.textContent=pu?`Selected: #${pu.id} • ${pu.cut_type} • Yield ${fmt2(pu.yield_kg)}kg • Proc ${pu.processing_date}`:'';
+        fillProcessingDatalist(); openModal('modal-batch-edit');
+      }
+    });
+
+    function updateEditQty(){const rec=getRecFromInput(editProcInput);if(!rec){editQtyCalc.value='';editProcHint.textContent='';return;}editQtyCalc.value=fmt2(qtyFrom(rec,editQtyMode.value));editProcHint.textContent=`Selected: #${rec.id} • ${rec.cut_type} • Yield ${fmt2(rec.yield_kg)}kg • Proc ${rec.processing_date}`;}
+    editProcInput.addEventListener('input',updateEditQty);editQtyMode.addEventListener('change',updateEditQty);
+
+    formBatchEdit.addEventListener('submit',async e=>{
+      e.preventDefault();
+      const id=editId.value; const rec=getRecFromInput(editProcInput);
+      if(!rec){alert('Please select a valid Processing ID.');return;}
+      const qty=qtyFrom(rec,editQtyMode.value); const expDate=editExpire.value; const facility=editFacility.value;
+      try{
+        const j=await fetchJSON('api/batch-update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,processing_id:rec.id,qty_kg:Number(qty),expire_date:expDate,facility})});
+        if(!j.ok)throw new Error(j.error||'Update failed');
+        const row=document.querySelector(`#tbl-batches tbody tr[data-id="${id}"]`); if(row){row.outerHTML=batchRowHTML(j.data);}
+        closeModal('modal-batch-edit'); formBatchEdit.reset();
+      }catch(err){alert(err.message);}
+    });
+
+    /* ---------- Init ---------- */
+    loadAnimals(); loadProcessing(); loadBatches();
+  </script>
+</body>
+
+<script defer>
+(function () {
+  const here = (location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+  document.querySelectorAll('aside .nav a.nav-link').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    const target = href.split('/').pop().split('#')[0].toLowerCase();
+    if (here === target || (here === '' && target === 'dashboard.html')) a.classList.add('active');
+  });
+}());
+</script>
+
+</html>
