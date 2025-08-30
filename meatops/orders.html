@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin – Orders & Distribution</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <style>
+    .track-wrap{ display:grid; grid-template-columns: 360px 1fr; gap:16px; }
+    @media (max-width: 1000px){ .track-wrap{ grid-template-columns:1fr; } }
+    .panel-soft{ background: linear-gradient(160deg, rgba(17,23,34,.9), rgba(15,21,32,.9));
+      border:1px solid var(--border); border-radius:16px; padding:14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03); }
+    .progress-bar{ height:10px; background:#0b1220; border:1px solid var(--border); border-radius:999px; overflow:hidden; }
+    .progress-bar > div{ height:100%; width:0%; background:linear-gradient(180deg,#1f6feb,#0f3d8f); transition:width .6s ease; }
+    .map-shell{ height: 420px; border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+    .pulse{ width:16px; height:16px; background:#1f6feb; border-radius:50%; box-shadow: 0 0 0 rgba(31,111,235,.6); animation:pulse 2s infinite; border:2px solid #cce0ff; }
+    @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(31,111,235,.6);} 70%{box-shadow:0 0 0 18px rgba(31,111,235,0);} 100%{box-shadow:0 0 0 0 rgba(31,111,235,0);} }
+
+    /* Printable label – upgraded two-column layout */
+    .printable{ display:none; }
+    .label-card2{
+      width: 100mm; min-height: 65mm; padding: 8mm;
+      border: 1px solid #000; border-radius: 3mm;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    .lab-two { display:grid; grid-template-columns: 58% 42%; column-gap:14px; }
+    .lab-title{ font-weight:800; font-size:16px; margin:0 0 8px; }
+    .lab-line{ font-size:12px; margin:2px 0; }
+    .lab-strong{ font-weight:700; }
+    .lab-barcode { margin-top:10px; }
+    .lab-barcode svg#barcode { display:block; width:100%; height:auto; }
+    @media print {
+      body{ background:#fff; color:#000; }
+      aside.sidebar, .topbar, .footer, .page .card:not(.print-card){ display:none !important; }
+      .printable{ display:block; padding:18px; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div><h1>MeatOps</h1><small>Admin Console</small></div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="intake.html" class="nav-link">Livestock / Intake</a>
+      <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+      <a href="quality.html" class="nav-link">Quality Control</a>
+      <a href="orders.html" class="nav-link active">Orders &amp; Distribution</a>
+      <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+      <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+      <a href="customer.html" class="nav-link">Customers</a>
+      <a href="delivery.html" class="nav-link ">Deliveries</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </nav>
+    <footer class="sidebar-footer">v2.2</footer>
+  </aside>
+
+  <main class="main">
+    <header class="topbar"><div class="breadcrumbs"><span>Orders &amp; Distribution</span></div></header>
+
+    <section class="page show" id="orders">
+      <div class="stack">
+
+        <!-- Inventory Summary -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Inventory Summary</h2>
+            <div class="actions-inline">
+              <button class="btn outline" id="refreshSummary">Refresh</button>
+            </div>
+          </div>
+          <div id="sum-msg" class="msg err hidden"></div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-summary">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Product Name</th>
+                  <th>Quantity</th>
+                  <th>Weight</th>
+                  <th>Price / Unit</th>
+                  <th>Expire In</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="6">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Orders list -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Orders</h2>
+            <div class="actions-inline">
+              <button class="btn" id="btn-track-panel">Track Order</button>
+              <button class="btn primary open-modal" data-modal="modal-add-order">+ Add Order</button>
+              <button class="btn outline" id="refreshOrders">Refresh</button>
+            </div>
+          </div>
+          <div id="ord-msg" class="msg err hidden"></div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-orders">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Order ID</th>
+                  <th>Product</th>
+                  <th>Pack</th>
+                  <th>Batch</th>
+                  <th>Customer</th>
+                  <th>Delivery</th>
+                  <th>Price / Unit</th>
+                  <th>Expire In</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="10">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tracking -->
+        <div class="card" id="track-card">
+          <div class="card-head">
+            <h2>Track My Order</h2>
+            <div class="actions-inline">
+              <span class="pill info" id="track-status">Awaiting ID…</span>
+            </div>
+          </div>
+
+          <div class="track-wrap">
+            <div class="panel-soft">
+              <div class="form" style="margin-bottom:10px;">
+                <div class="two">
+                  <label>Order ID
+                    <input id="trackOrderId" placeholder="e.g., X43wa" />
+                  </label>
+                  <label>&nbsp;
+                    <button class="btn primary" id="trackBtn" style="width:100%;">Show on Map</button>
+                  </label>
+                </div>
+              </div>
+
+              <div class="grid" style="grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div><div class="muted" style="font-size:12px;">Driver</div><div id="driverName" style="font-weight:600;">—</div></div>
+                <div><div class="muted" style="font-size:12px;">Phone</div><div id="driverPhone" style="font-weight:600;">—</div></div>
+              </div>
+
+              <div class="grid" style="grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div><div class="muted" style="font-size:12px;">Current</div><div id="curLatLng">—</div></div>
+                <div><div class="muted" style="font-size:12px;">Destination</div><div id="dstLatLng">—</div></div>
+              </div>
+
+              <div class="muted" style="font-size:12px; margin-bottom:6px;">Progress</div>
+              <div class="progress-bar"><div id="progressFill"></div></div>
+
+              <div style="margin-top:10px;">
+                <div class="muted" style="font-size:12px;">ETA (rough)</div>
+                <div id="etaText">—</div>
+              </div>
+            </div>
+
+            <div class="map-shell">
+              <div id="map" style="height:100%;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <!-- Add Order Modal -->
+  <div class="modal" id="modal-add-order" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Add Order</h3>
+        <button class="icon close-modal">✕</button>
+      </div>
+      <form id="form-order" class="form" novalidate>
+        <div class="two">
+          <label>Order ID (auto)
+            <div style="display:flex; gap:8px;">
+              <input id="orderId" name="order_id" readonly />
+              <button class="btn sm" type="button" id="regenId">Regen</button>
+            </div>
+          </label>
+          <label>Pack Size (kg)
+            <select id="pack" name="weight_kg" disabled>
+              <option value="">Select product first</option>
+            </select>
+          </label>
+        </div>
+
+        <label>Product Package Name
+          <input id="ppn" name="product_package_name" list="ppnList" placeholder="Start typing…" />
+          <datalist id="ppnList"></datalist>
+        </label>
+
+        <div class="two">
+          <label>Product ID (FIFO)
+            <input id="productId" name="product_id" readonly />
+          </label>
+          <label>Batch Code
+            <input id="batchCode" name="batch_code" readonly />
+          </label>
+        </div>
+
+        <div class="two">
+          <label>Expire In (days)
+            <input id="expireDays" readonly />
+          </label>
+          <label>Price / Unit
+            <input id="priceUnit" readonly />
+          </label>
+        </div>
+
+        <div class="two">
+          <label>Customer ID
+            <input id="customerId" name="customer_id" type="number" placeholder="Existing customer_id" />
+          </label>
+          <label>Delivery ID
+            <input id="deliveryId" name="delivery_id" type="number" placeholder="Existing delivery_id" />
+          </label>
+        </div>
+
+        <div id="m_msg" class="msg err hidden"></div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Add Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Printable label (two simple columns) -->
+  <div class="printable">
+    <div id="labelRoot" class="label-card2">
+      <div class="lab-two">
+        <!-- LEFT: parcel details + barcode -->
+        <div>
+          <div id="lblProdTitle" class="lab-title">—</div>
+          <div class="lab-line"><span class="lab-strong">Pack:</span> <span id="lblPack">—</span></div>
+          <div class="lab-line"><span class="lab-strong">Price:</span> <span id="lblPrice">—</span></div>
+          <div class="lab-line"><span class="lab-strong">Batch:</span> <span id="lblBatch">—</span></div>
+          <div class="lab-line"><span class="lab-strong">Expire Date:</span> <span id="lblExpireDate">—</span></div>
+          <div class="lab-barcode"><svg id="barcode"></svg></div>
+        </div>
+
+        <!-- RIGHT: customer details + IDs -->
+        <div>
+          <div class="lab-line"><span class="lab-strong">Customer:</span> <span id="lblCustName">—</span></div>
+          <div class="lab-line"><span class="lab-strong">Address:</span> <span id="lblCustAddr">—</span></div>
+          <div class="lab-line"><span class="lab-strong">Phone:</span> <span id="lblCustPhone">—</span></div>
+          <div class="lab-line" style="margin-top:8px;"><span class="lab-strong">Delivery ID:</span> <span id="lblDeliveryId">—</span></div>
+          <div class="lab-line"><span class="lab-strong">Track ID:</span> <span id="lblTrackId">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ----- modal helpers
+    document.querySelectorAll('.modal').forEach(m => m.setAttribute('aria-hidden','true'));
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.setAttribute('aria-hidden','false'); document.body.classList.add('body-modal-open'); } }
+    function closeModal(el){
+      const m=el?.closest?.('.modal') || (typeof el==='string' ? document.getElementById(el) : null);
+      if(!m) return;
+      m.setAttribute('aria-hidden','true');
+      const anyOpen=[...document.querySelectorAll('.modal')].some(x=>x.getAttribute('aria-hidden')==='false');
+      if(!anyOpen) document.body.classList.remove('body-modal-open');
+    }
+    document.addEventListener('click', e=>{
+      if(e.target.matches('.open-modal')) openModal(e.target.dataset.modal);
+      if(e.target.matches('.close-modal,[data-cancel]')) closeModal(e.target);
+      if(e.target.classList.contains('modal')) closeModal(e.target);
+    });
+
+    // ----- API endpoints
+    const API = {
+      summary:  'api/get_order_summary.php',
+      names:    'api/list_product_package_names.php',
+      weights:  'api/list_weights_for_product.php',
+      fifo:     'api/find_fifo_product.php',
+      create:   'api/create_order.php',
+      orders:   'api/get_orders.php',
+      track:    'api/track_order.php',
+      customer: 'api/get_customer.php'
+    };
+
+    // ----- utils
+    function showMsg(id, text){ const el=document.getElementById(id); if(!el) return; if(text){ el.textContent=text; el.classList.remove('hidden'); } else { el.classList.add('hidden'); } }
+    async function fetchJSON(url, opts={}){ let res, text; try{ res=await fetch(url, opts); }catch(e){ throw new Error('Network error: '+e.message); } try{ text=await res.text(); return JSON.parse(text); }catch(e){ throw new Error((text||'').replace(/<[^>]+>/g,'').slice(0,300)||'Server returned non-JSON'); } }
+    const money = n => (n==null?'—':'৳ '+Number(n).toFixed(2));
+    const daysTxt = d => (d==null?'—': (d>=0? `${d} days` : `${Math.abs(d)} days (expired)`));
+    function genId(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; let s=''; for(let i=0;i<5;i++) s += chars[Math.floor(Math.random()*chars.length)]; return s; }
+    const debounce = (fn,ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+
+    // ----- summary
+    async function loadSummary(){
+      const tb=document.querySelector('#tbl-summary tbody');
+      tb.innerHTML='<tr><td colspan="6">Loading…</td></tr>';
+      try{
+        const j=await fetchJSON(API.summary);
+        tb.innerHTML='';
+        (j||[]).forEach((r,i)=>{
+          const tr=document.createElement('tr');
+          tr.innerHTML=`
+            <td>${i+1}</td>
+            <td>${r.product_package_name||''}</td>
+            <td>${r.quantity||0}</td>
+            <td>${Number(r.weight_kg).toFixed(2)} kg</td>
+            <td>${money(r.price_per_unit)}</td>
+            <td>${daysTxt(r.days_left)}</td>`;
+          tb.appendChild(tr);
+        });
+        if(!j?.length) tb.innerHTML='<tr><td colspan="6">No data.</td></tr>';
+        showMsg('sum-msg','');
+      }catch(e){ showMsg('sum-msg', e.message); tb.innerHTML='<tr><td colspan="6">Error</td></tr>'; }
+    }
+
+    // ----- orders table
+    async function loadOrders(){
+      const tb=document.querySelector('#tbl-orders tbody');
+      tb.innerHTML='<tr><td colspan="10">Loading…</td></tr>';
+      try{
+        const j=await fetchJSON(API.orders);
+        tb.innerHTML='';
+        (j||[]).forEach((r,i)=>{
+          const tr=document.createElement('tr');
+          tr.innerHTML=`
+            <td>${i+1}</td>
+            <td>${r.order_id||''}</td>
+            <td>${r.product_package_name||''}</td>
+            <td>${Number(r.weight_kg).toFixed(2)} kg</td>
+            <td>${r.batch_code||''}</td>
+            <td>${r.customer_id||''}</td>
+            <td>${r.delivery_id||''}</td>
+            <td>${money(r.price_per_unit)}</td>
+            <td>${daysTxt(r.days_left)}</td>
+            <td><button class="btn sm" onclick='printLabel(${JSON.stringify(r)})'>Print Label</button></td>`;
+          tb.appendChild(tr);
+        });
+        if(!j?.length) tb.innerHTML='<tr><td colspan="10">No orders yet.</td></tr>';
+        showMsg('ord-msg','');
+      }catch(e){ showMsg('ord-msg', e.message); tb.innerHTML='<tr><td colspan="10">Error</td></tr>'; }
+    }
+    document.getElementById('refreshSummary').onclick=loadSummary;
+    document.getElementById('refreshOrders').onclick=loadOrders;
+
+    // ----- suggestions + weights + FIFO autofill
+    async function loadSuggestions(){
+      try{
+        const j=await fetchJSON(API.names);
+        const dl=document.getElementById('ppnList'); dl.innerHTML='';
+        (j||[]).forEach(v=>{ const o=document.createElement('option'); o.value=v; dl.appendChild(o); });
+      }catch(e){ /*noop*/ }
+    }
+    async function loadWeightsFor(name){
+      const sel=document.getElementById('pack');
+      sel.innerHTML='<option value="">Loading…</option>';
+      sel.disabled=true;
+      if(!name){ sel.innerHTML='<option value="">Select product first</option>'; return; }
+      try{
+        const weights=await fetchJSON(`${API.weights}?product_package_name=${encodeURIComponent(name)}`);
+        sel.innerHTML='';
+        if(Array.isArray(weights)&&weights.length){
+          weights.sort((a,b)=>parseFloat(a)-parseFloat(b));
+          for(const w of weights){
+            const opt=document.createElement('option');
+            opt.value=String(w);
+            opt.textContent=Number(w).toFixed(2);
+            sel.appendChild(opt);
+          }
+          sel.disabled=false;
+        }else{
+          sel.innerHTML='<option value="">No stock</option>';
+        }
+      }catch(e){
+        sel.innerHTML='<option value="">Failed to load</option>';
+      }
+    }
+    async function fifoLookup(){
+      const name=document.getElementById('ppn').value.trim();
+      const w=document.getElementById('pack').value;
+      if(!name || !w) return;
+      try{
+        const j=await fetchJSON(`${API.fifo}?product_package_name=${encodeURIComponent(name)}&weight_kg=${encodeURIComponent(w)}`);
+        document.getElementById('productId').value = j?.product_id ?? '';
+        document.getElementById('batchCode').value = j?.batch_code ?? '';
+        document.getElementById('expireDays').value = (j?.days_left!=null? j.days_left : '');
+        document.getElementById('priceUnit').value = (j?.price_per_unit!=null? j.price_per_unit : '');
+        showMsg('m_msg','');
+      }catch(e){
+        showMsg('m_msg', e.message);
+        document.getElementById('productId').value = '';
+        document.getElementById('batchCode').value = '';
+        document.getElementById('expireDays').value = '';
+        document.getElementById('priceUnit').value = '';
+      }
+    }
+    const onNameChange = debounce(async ()=>{
+      const name=document.getElementById('ppn').value.trim();
+      await loadWeightsFor(name);
+      await fifoLookup();
+    }, 200);
+    document.getElementById('ppn').addEventListener('input', onNameChange);
+    document.getElementById('ppn').addEventListener('change', async ()=>{
+      await loadWeightsFor(document.getElementById('ppn').value.trim());
+      fifoLookup();
+    });
+    document.getElementById('pack').addEventListener('change', fifoLookup);
+
+    // ----- create order
+    const orderIdEl=document.getElementById('orderId');
+    orderIdEl.value=genId();
+    document.getElementById('regenId').onclick=()=>orderIdEl.value=genId();
+
+    document.getElementById('form-order').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const payload={
+        order_id: orderIdEl.value.trim(),
+        product_package_name: document.getElementById('ppn').value.trim(),
+        weight_kg: document.getElementById('pack').value,
+        customer_id: document.getElementById('customerId').value,
+        delivery_id: document.getElementById('deliveryId').value
+      };
+      if(!payload.order_id || !payload.product_package_name || !payload.weight_kg || !payload.customer_id || !payload.delivery_id){
+        showMsg('m_msg','Please fill required fields.'); return;
+      }
+      try{
+        const j=await fetchJSON(API.create,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(!j.success){ showMsg('m_msg', j.message||'Create failed'); return; }
+        closeModal('modal-add-order');
+        showMsg('m_msg',''); loadSummary(); loadOrders();
+      }catch(e){ showMsg('m_msg', e.message); }
+    });
+
+    // ----- printing label (two-column, with customer details, no barcode text)
+    async function printLabel(row){
+      // Left column
+      document.getElementById('lblProdTitle').textContent = row.product_package_name || '—';
+      document.getElementById('lblPack').textContent      = `${Number(row.weight_kg).toFixed(2)} kg`;
+      document.getElementById('lblPrice').textContent     = `${(row.price_per_unit!=null)? ('৳ '+Number(row.price_per_unit).toFixed(2)) : '—'}`;
+      document.getElementById('lblBatch').textContent     = row.batch_code || '—';
+      document.getElementById('lblExpireDate').textContent= row.expire_date ? new Date(row.expire_date).toISOString().slice(0,10) : '—';
+
+      // Right column
+      document.getElementById('lblDeliveryId').textContent = row.delivery_id ?? '—';
+      document.getElementById('lblTrackId').textContent    = row.order_id || '—';
+
+      // Customer details
+      try{
+        const c = await fetchJSON(`${API.customer}?customer_id=${encodeURIComponent(row.customer_id)}`);
+        document.getElementById('lblCustName').textContent = c?.name || `ID ${row.customer_id||''}`;
+        document.getElementById('lblCustAddr').textContent = c?.address || '—';
+        document.getElementById('lblCustPhone').textContent= c?.phone || (c?.email||'—');
+      }catch(e){
+        document.getElementById('lblCustName').textContent = `ID ${row.customer_id||''}`;
+        document.getElementById('lblCustAddr').textContent = '—';
+        document.getElementById('lblCustPhone').textContent= '—';
+      }
+
+      // Barcode (no text under it)
+      JsBarcode("#barcode", row.order_id || " ", {
+        format: "CODE128",
+        width: 2,
+        height: 48,
+        displayValue: false,
+        margin: 0,
+        marginTop: 0,
+        marginBottom: 0
+      });
+
+      window.print();
+    }
+
+    // ----- tracking (unchanged)
+    let map, curMarker, dstMarker, poly;
+    function initMap(){
+      map = L.map('map', { zoomControl: true }).setView([23.7808, 90.2794], 11);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map);
+    }
+    initMap();
+    function makePulse(latlng){ return L.marker(latlng,{icon:L.divIcon({className:'',html:'<div class="pulse"></div>',iconSize:[16,16],iconAnchor:[8,8]})}); }
+    function setStatus(txt,kind='info'){ const el=document.getElementById('track-status'); el.className='pill '+kind; el.textContent=txt; }
+    function setProgress(p){ document.getElementById('progressFill').style.width=Math.max(0,Math.min(100,p)).toFixed(0)+'%'; }
+    function haversine(lat1,lng1,lat2,lng2){ function toRad(v){return v*Math.PI/180;} const R=6371,dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1); const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2; return 2*R*Math.asin(Math.sqrt(a)); }
+    function roughETA(km){ if(!isFinite(km)||km<=0) return '—'; const hours=km/25; const min=Math.round(hours*60); return (min<60)?`${min} min`:`${(min/60).toFixed(1)} h`; }
+    document.getElementById('btn-track-panel').onclick=()=>{ document.getElementById('trackOrderId').focus(); document.getElementById('trackOrderId').select?.(); };
+    document.getElementById('trackBtn').addEventListener('click', async ()=>{
+      const oid=document.getElementById('trackOrderId').value.trim();
+      if(!oid){ setStatus('Enter Order ID','warn'); return; }
+      try{
+        const j=await fetchJSON(`${API.track}?order_id=${encodeURIComponent(oid)}`);
+        const dname=j?.driver_name||'—', dphone=j?.driver_phone||'—';
+        document.getElementById('driverName').textContent=dname;
+        document.getElementById('driverPhone').textContent=dphone;
+        const clat=parseFloat(j?.current_lat), clng=parseFloat(j?.current_lng);
+        const dlat=parseFloat(j?.dest_lat),    dlng=parseFloat(j?.dest_lng);
+        [curMarker,dstMarker,poly].forEach(l=>{ if(l){ map.removeLayer(l); } });
+        let haveCur=isFinite(clat)&&isFinite(clng), haveDst=isFinite(dlat)&&isFinite(dlng);
+        document.getElementById('curLatLng').textContent = haveCur ? `${clat.toFixed(5)}, ${clng.toFixed(5)}` : '—';
+        document.getElementById('dstLatLng').textContent = haveDst ? `${dlat.toFixed(5)}, ${dlng.toFixed(5)}` : '—';
+        if(haveCur) curMarker=makePulse([clat,clng]).addTo(map).bindTooltip('Current',{permanent:false});
+        if(haveDst) dstMarker=L.marker([dlat,dlng]).addTo(map).bindTooltip('Destination',{permanent:false});
+        if(haveCur&&haveDst){
+          poly=L.polyline([[clat,clng],[dlat,dlng]],{color:'#58a6ff',weight:4,opacity:.9}).addTo(map);
+          map.fitBounds(poly.getBounds(),{padding:[30,30]});
+          const total=haversine(clat,clng,dlat,dlng);
+          const progress=(total<=1)?95:(total<5?80:(total<10?60:(total<20?40:20)));
+          setProgress(progress); document.getElementById('etaText').textContent=roughETA(total); setStatus('On Route','ok');
+        }else if(haveCur){ map.setView([clat,clng],13); setProgress(15); document.getElementById('etaText').textContent='—'; setStatus('Assigned','info'); }
+        else if(haveDst){ map.setView([dlat,dlng],13); setProgress(0); setStatus('Created','warn'); document.getElementById('etaText').textContent='—'; }
+        else{ setProgress(0); setStatus('No tracking data yet','danger'); document.getElementById('etaText').textContent='—'; }
+      }catch(e){ setStatus('Tracking failed','danger'); }
+    });
+
+    // ----- init
+    (function init(){
+      const here=(location.pathname.split('/').pop()||'orders.html').toLowerCase();
+      document.querySelectorAll('aside .nav a.nav-link').forEach(a=>{
+        const target=(a.getAttribute('href')||'').split('/').pop().split('#')[0].toLowerCase();
+        if(here===target) a.classList.add('active');
+      });
+      loadSummary(); loadOrders(); loadSuggestions();
+      document.querySelectorAll('[data-modal="modal-add-order"]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          document.getElementById('pack').innerHTML='<option value="">Select product first</option>';
+          document.getElementById('pack').disabled=true;
+          document.getElementById('ppn').value='';
+          document.getElementById('productId').value='';
+          document.getElementById('batchCode').value='';
+          document.getElementById('expireDays').value='';
+          document.getElementById('priceUnit').value='';
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

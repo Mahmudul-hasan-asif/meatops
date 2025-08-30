@@ -173,7 +173,7 @@ body{ margin:0; display:block; background:var(--bg); color:var(--text); font:14p
 
 
 /* Storage page: force real space between stacked cards */
-.main #storage .card { 
+.main #storage .card {
   margin-bottom: 24px !important;   /* creates gap below every card */
 }
 .main #storage .card:last-of-type {
@@ -183,6 +183,24 @@ body{ margin:0; display:block; background:var(--bg); color:var(--text); font:14p
 /* Give the chart some breathing room inside its card (prevents borders touching) */
 .main #storage .chart-wrap {
   padding-bottom: 12px;              /* or margin-bottom: 12px; either works */
+}
+
+
+.page#customers .card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;        /* card takes full height */
+  min-height: 0;       /* critical for flex scroll */
+}
+
+.page#customers .card-head {
+  flex: 0 0 auto;      /* fixed size */
+}
+
+.page#customers .table-scroll {
+  flex: 1 1 auto;      /* take up the remaining space */
+  min-height: 0;       /* allows scrollbars */
+  overflow-y: auto;    /* vertical scrolling */
 }
 
 

@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin – Forecasting & Analytics</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Charts & XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* Layout */
+    .page#analytics{ min-height:calc(100vh - 120px); display:flex; flex-direction:column; }
+    .big-grid{
+      display:grid; gap:16px;
+      grid-template-columns:1fr 1fr;
+      grid-auto-rows:minmax(380px, auto);
+    }
+    @media (max-width:1100px){ .big-grid{ grid-template-columns:1fr; } }
+
+    .card{
+      display:flex; flex-direction:column; min-height:0;
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 10px 20px rgba(0,0,0,.2);
+    }
+    .card-head{ padding:14px 16px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .pill{ display:inline-block; border:1px solid var(--border); padding:4px 8px; border-radius:999px; font-size:12px; }
+    .pill.warn{ border-color:#e6b80040; } .pill.danger{ border-color:#e6000040; } .pill.info{ border-color:#0080ff40; }
+
+    .chart-wrap{ flex:1; padding:8px 12px; display:flex; align-items:stretch; }
+    /* Fixed heights so charts don’t collapse or loop */
+    .chart-canvas{ width:100% !important; height:340px !important; display:block; }
+    .muted-sm{ color:var(--muted); font-size:12px; padding:0 16px 12px; }
+
+    /* 4th card split */
+    .dualCharts{ display:grid; grid-template-columns:1fr 1fr; gap:16px; width:100%; }
+    @media (max-width:1100px){ .dualCharts{ grid-template-columns:1fr; } }
+    .miniCard{ display:flex; flex-direction:column; }
+    .miniHead{ padding:6px 4px 0 4px; font-size:13px; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div><h1>MeatOps</h1><small>Admin Console</small></div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="intake.html" class="nav-link">Livestock / Intake</a>
+      <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+      <a href="quality.html" class="nav-link">Quality Control</a>
+      <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+      <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+      <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+      <a href="customer.html" class="nav-link">Customers</a>
+      <a href="delivery.html" class="nav-link ">Deliveries</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </nav>
+    <footer class="sidebar-footer">v2.9</footer>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="breadcrumbs"><span>Forecasting &amp; Analytics</span></div>
+      <div class="actions-inline" style="gap:8px;">
+        <button class="btn outline" id="btn-reload">Reload</button>
+      </div>
+    </header>
+
+    <section class="page show" id="analytics">
+      <div class="big-grid">
+
+        <!-- 1: Daily Orders Trend -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Daily Orders Trend (last 14 days)</h2>
+            <span class="pill info">7-day MA</span>
+          </div>
+          <div class="chart-wrap"><canvas id="trendChart" class="chart-canvas"></canvas></div>
+          <div id="trendNote" class="muted-sm"></div>
+        </div>
+
+        <!-- 2: 7-Day Forecast by Product -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Forecast by Product (next 7 days)</h2>
+            <span class="pill">SMA from last 14d</span>
+          </div>
+          <div class="chart-wrap"><canvas id="forecastChart" class="chart-canvas"></canvas></div>
+          <div id="forecastNote" class="muted-sm"></div>
+        </div>
+
+        <!-- 3: Stockout Risk → PIE CHART -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Stockout Risk (risk tiers)</h2>
+            <span class="pill warn">Lead time: 5 days</span>
+          </div>
+          <div class="chart-wrap"><canvas id="stockoutPie" class="chart-canvas"></canvas></div>
+          <div id="stockoutNote" class="muted-sm">Pie shows share of products by risk tier (High ≤ lead, Medium = lead+1..+3, Low otherwise).</div>
+        </div>
+
+        <!-- 4: Expiry Timeline & Discount Suggestion (Bubble + **BAR**) -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Expiry Timeline &amp; Discount Suggestion</h2>
+            <span class="pill danger">Bubble + Bar</span>
+          </div>
+          <div class="chart-wrap">
+            <div class="dualCharts">
+              <div class="miniCard">
+                <div class="miniHead">Expiry Risk Bubble Map (x: days left, y: avg/day, size: qty)</div>
+                <canvas id="expiryBubble" class="chart-canvas"></canvas>
+              </div>
+              <div class="miniCard">
+                <div class="miniHead">Suggested Discount by Product (Bar)</div>
+                <canvas id="discountBar" class="chart-canvas"></canvas>
+              </div>
+            </div>
+          </div>
+          <div id="expiryNote" class="muted-sm">Bubble = product risk geometry; Bar = suggested discount (%) per product.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <script>
+    // ------------------ XLSX LOADER ------------------
+    const XLSX_URL = 'MEAT.xlsx'; // keep next to analytics.html
+
+    async function loadFromXlsx(){
+      try{
+        const res = await fetch(XLSX_URL, {cache:'no-store'});
+        if(!res.ok) throw new Error('XLSX fetch failed: '+res.status);
+        const buf = await res.arrayBuffer();
+        const wb = XLSX.read(buf, {type:'array'});
+        const sheetName = wb.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:null});
+        return normalizeRows(rows);
+      }catch(e){
+        console.warn('Falling back to demo data:', e);
+        return null;
+      }
+    }
+
+    // map headers loosely
+    function pick(row, names){
+      const keys = Object.keys(row);
+      for(const key of keys){
+        const k = String(key).toLowerCase();
+        for(const name of names){
+          if(k.includes(name)) return row[key];
+        }
+      }
+      return null;
+    }
+    function normalizeRows(rows){
+      const items = [];
+      for(const r of rows){
+        const name = pick(r, ['product','item','name','title']);
+        const price = +pick(r, ['price','unit','rate']) || null;
+        const qty = +pick(r, ['qty','quantity','stock','on hand','onhand']) || null;
+        const days_left = +pick(r, ['days left','days_left','expiry','exp days','expire']) || null;
+        const avg = +pick(r, ['avg/day','avg per day','daily','per day']) || null;
+        if(!name) continue;
+        items.push({name, price, quantity:qty, days_left, avg});
+      }
+      return items.length ? items : null;
+    }
+
+    // ------------------ DEMO DATA (fallback) ------------------
+    const DEMO = [
+      {name:'Chicken Breast Boneless',        price:627,  quantity: 90, days_left: 6,  avg: 9},
+      {name:'Chicken Drumstick',              price:512,  quantity: 70, days_left: 4,  avg: 7},
+      {name:'Chicken Thigh',                  price:414,  quantity: 55, days_left: 9,  avg: 8},
+      {name:'Broiler Chicken (Without Skin)', price:298,  quantity: 80, days_left: 3,  avg: 12},
+      {name:'Beef Premium Cube',              price:795,  quantity: 35, days_left: 12, avg: 4},
+      {name:'Beef Boneless',                  price:1240, quantity: 22, days_left: 15, avg: 3},
+      {name:'Mutton (Khashi)',                price:1290, quantity: 18, days_left: 8,  avg: 2}
+    ];
+
+    // Create a synthetic 28-day order history from items
+    function synthOrders(items, days=28){
+      const today = new Date();
+      const orders=[];
+      for(let i=days;i>=0;i--){
+        const d=new Date(today); d.setDate(d.getDate()-i);
+        const iso=d.toISOString();
+        items.forEach((it,idx)=>{
+          const base = Number.isFinite(it.avg) && it.avg>0
+            ? it.avg
+            : (Number.isFinite(it.quantity) && Number.isFinite(it.days_left) && it.days_left>0)
+                ? Math.max(1, it.quantity/it.days_left/2)
+                : Math.max(1, Math.round((1000/(it.price||500))));
+          const season = 1 + 0.25*Math.sin((i+idx)*0.55);
+          const qty = Math.max(0, Math.round(base*season + (idx%3===0?1:0)));
+          for(let k=0;k<qty;k++){
+            orders.push({ product_package_name: it.name, created_at: iso, price_per_unit: it.price||0 });
+          }
+        });
+      }
+      return orders;
+    }
+
+    // ------------------ Helpers ------------------
+    const fmtDate = d => new Date(d).toISOString().slice(0,10);
+    const sum = (arr, fn=x=>x)=>arr.reduce((a,v)=>a+(+fn(v)||0),0);
+    function groupBy(arr, keyFn){ const m=new Map(); for(const x of arr){ const k=keyFn(x); if(!m.has(k)) m.set(k,[]); m.get(k).push(x);} return m; }
+    function movingAvg(series, window){ const out=[]; for(let i=0;i<series.length;i++){ const from=Math.max(0,i-window+1); out.push(sum(series.slice(from,i+1))/((i-from)+1)); } return out; }
+
+    function lastNDaysSeries(orders, n){
+      const end = new Date(); const start = new Date(); start.setDate(end.getDate()-(n-1));
+      const days=[]; for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) days.push(fmtDate(d));
+      const counts = days.map(day => orders.filter(o=> o.created_at && fmtDate(o.created_at)===day).length );
+      return {days, counts};
+    }
+    function avgPerDayByProduct(orders, n=14){
+      const end=new Date(); const start=new Date(); start.setDate(end.getDate()-(n-1));
+      const lastN=orders.filter(o=> o.created_at && new Date(o.created_at)>=start && new Date(o.created_at)<=end);
+      const byProd=groupBy(lastN, o=>o.product_package_name||'—');
+      const out=new Map(); const denom=Math.max(1, new Set(lastN.map(r=>fmtDate(r.created_at))).size);
+      for(const [name, rows] of byProd) out.set(name, rows.length/denom);
+      return out;
+    }
+
+    // ------------------ Charts ------------------
+    let trendChart, forecastChart, stockoutPieChart, expiryBubbleChart, discountBarChart;
+    function destroyChart(ref){ if(ref && typeof ref.destroy==='function'){ ref.destroy(); } }
+
+    function buildTrend(orders){
+      destroyChart(trendChart);
+      const {days, counts} = lastNDaysSeries(orders, 14);
+      const ma7 = movingAvg(counts, 7);
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      trendChart = new Chart(ctx, {
+        type:'line',
+        data:{ labels:days, datasets:[
+          { label:'Orders', data:counts, tension:.25 },
+          { label:'7d MA', data:ma7, borderDash:[6,4], tension:.25 }
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false,
+          scales:{ x:{ ticks:{ autoSkip:true, maxTicksLimit:7 } }, y:{ beginAtZero:true, precision:0 } }
+        }
+      });
+      document.getElementById('trendNote').textContent = 'Source: MEAT.xlsx (or demo fallback).';
+    }
+
+    function buildForecast(orders){
+      destroyChart(forecastChart);
+      const avg = avgPerDayByProduct(orders, 14);
+      const rows = Array.from(avg.entries()).map(([name, v])=>({name, forecast7: v*7}))
+        .sort((a,b)=>b.forecast7-a.forecast7).slice(0,8);
+      const ctx = document.getElementById('forecastChart').getContext('2d');
+      forecastChart = new Chart(ctx, {
+        type:'bar',
+        data:{ labels:rows.map(r=>r.name), datasets:[{ label:'Next 7 days (packs)', data:rows.map(r=>+r.forecast7.toFixed(1)) }] },
+        options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
+      });
+      document.getElementById('forecastNote').textContent = 'Forecast = last 14d average × 7.';
+    }
+
+    // === Stockout Risk PIE ===
+    function buildStockoutPie(items, orders){
+      destroyChart(stockoutPieChart);
+      const avg = avgPerDayByProduct(orders, 14);
+      const LEAD = 5;
+
+      const tiers = { high:0, medium:0, low:0 };
+      items.forEach(it=>{
+        const daily = avg.get(it.name) || it.avg || 0;
+        const dto = daily>0 ? (+it.quantity||0)/daily : 0;
+        if(dto<=LEAD) tiers.high++;
+        else if(dto<=LEAD+3) tiers.medium++;
+        else tiers.low++;
+      });
+
+      const ctx = document.getElementById('stockoutPie').getContext('2d');
+      stockoutPieChart = new Chart(ctx, {
+        type:'pie',
+        data:{
+          labels:['High (≤5d)','Medium (6–8d)','Low (>8d)'],
+          datasets:[{ data:[tiers.high, tiers.medium, tiers.low] }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'bottom' } }
+        }
+      });
+      document.getElementById('stockoutNote').textContent =
+        `Lead time ${LEAD} days • Products by tier — High:${tiers.high}  Medium:${tiers.medium}  Low:${tiers.low}`;
+    }
+
+    // === Expiry Bubble (unchanged) ===
+    function buildExpiryBubble(items, orders){
+      destroyChart(expiryBubbleChart);
+      const avg = avgPerDayByProduct(orders, 14);
+      const data = items.map(it=>{
+        const daily = avg.get(it.name) || it.avg || 0;
+        const left  = Number.isFinite(it.days_left) ? it.days_left : 0;
+        const qty   = Number.isFinite(it.quantity) ? it.quantity : 0;
+        const r = Math.max(6, Math.sqrt(Math.max(0, qty)) * 1.6);
+        return {x:left, y:+daily.toFixed(2), r, label:it.name, qty};
+      });
+      const ctx = document.getElementById('expiryBubble').getContext('2d');
+      expiryBubbleChart = new Chart(ctx, {
+        type:'bubble',
+        data:{ datasets:[{ label:'Products', data:data.map(d=>({x:d.x,y:d.y,r:d.r})), parsing:false }] },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          scales:{
+            x:{ title:{display:true,text:'Days left'}, beginAtZero:true, suggestedMax: Math.max(16, ...data.map(d=>d.x+2)) },
+            y:{ title:{display:true,text:'Avg sales per day'}, beginAtZero:true }
+          },
+          plugins:{ tooltip:{ callbacks:{ label:(c)=>{
+            const d=data[c.dataIndex]; return `${d.label}: ${d.x}d left, ${d.y}/day, qty ${d.qty}`;
+          }}}}
+        }
+      });
+    }
+
+    // === Discount BAR (replaces Polar) ===
+    function buildDiscountBar(items, orders){
+      destroyChart(discountBarChart);
+      const avg = avgPerDayByProduct(orders, 14);
+      const rows = items.map(it=>{
+        const daily = avg.get(it.name) || it.avg || 0;
+        const left  = Number.isFinite(it.days_left) ? it.days_left : 0;
+        const qty   = Number.isFinite(it.quantity) ? it.quantity : 0;
+        const needed = left>0 ? qty/left : Infinity;
+        let disc=0;
+        if(daily===0){ disc = left<=3?30:left<=7?20:10; }
+        else{
+          const ratio = needed/daily;
+          disc = ratio<=1?0 : ratio<=1.25?10 : ratio<=1.75?20 : 30;
+        }
+        return {name:it.name, disc};
+      }).sort((a,b)=>b.disc-a.disc);
+
+      const ctx = document.getElementById('discountBar').getContext('2d');
+      discountBarChart = new Chart(ctx, {
+        type:'bar',
+        data:{ labels: rows.map(r=>r.name), datasets:[{ label:'Suggested Discount (%)', data: rows.map(r=>r.disc) }] },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          indexAxis:'y',
+          scales:{ x:{ beginAtZero:true, suggestedMax:35, ticks:{ stepSize:10 } } }
+        }
+      });
+    }
+
+    // ------------------ Orchestration ------------------
+    async function buildAll(){
+      const itemsX = await loadFromXlsx();
+      const items = itemsX && itemsX.length ? itemsX : DEMO;
+      const orders = synthOrders(items, 28);
+
+      buildTrend(orders);
+      buildForecast(orders);
+      buildStockoutPie(items, orders);        // pie here
+      buildExpiryBubble(items, orders);
+      buildDiscountBar(items, orders);        // bar here
+    }
+
+    // Active nav highlight
+    (function(){
+      const here=(location.pathname.split('/').pop()||'analytics.html').toLowerCase();
+      document.querySelectorAll('aside .nav a.nav-link').forEach(a=>{
+        const target=(a.getAttribute('href')||'').split('/').pop().split('#')[0].toLowerCase();
+        if(here===target) a.classList.add('active');
+      });
+    })();
+
+    document.getElementById('btn-reload').addEventListener('click', buildAll);
+    buildAll();
+  </script>
+</body>
+</html>

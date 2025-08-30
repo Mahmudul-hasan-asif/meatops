@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin – Delivery Agents</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div><h1>MeatOps</h1><small>Admin Console</small></div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="intake.html" class="nav-link">Livestock / Intake</a>
+      <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+      <a href="quality.html" class="nav-link">Quality Control</a>
+      <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+      <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+      <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+      <a href="suppliers.html" class="nav-link">Suppliers</a>
+      <a href="customer.html" class="nav-link">Customers</a>
+      <a href="delivery.html" class="nav-link active">Deliveries</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </nav>
+    <footer class="sidebar-footer">v4.0</footer>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="breadcrumbs"><span>Deliveries</span></div>
+    </header>
+
+    <!-- Keep id="customers" so the same full-height card CSS applies -->
+    <section class="page show" id="customers">
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <h2>All Delivery Agents</h2>
+            <div class="actions-inline">
+              <button class="btn primary open-modal" data-modal="modal-agent">＋ Add Agent</button>
+            </div>
+          </div>
+
+          <div id="page-msg" class="msg err" style="display:none"></div>
+
+          <div class="table-scroll">
+            <table class="table" id="tbl-agents">
+              <thead>
+                <tr>
+                  <th style="width:90px">ID</th>
+                  <th>Type</th>
+                  <th>Driver</th>
+                  <th>Phone</th>
+                  <th>Car #</th>
+                  <th style="width:170px">Created</th>
+                  <th style="width:160px">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="7">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal" id="modal-agent" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="modal-title">Add Agent</h3>
+        <button class="icon close-modal" aria-label="Close">✕</button>
+      </div>
+      <form id="agentForm" class="form" novalidate>
+        <input type="hidden" id="delivery_id" />
+
+        <div class="two">
+          <label>Type
+            <select id="type" required>
+              <option value="" disabled selected>Select vehicle type</option>
+              <option>Bike</option>
+              <option>Scooter</option>
+              <option>Van</option>
+              <option>Mini Truck</option>
+              <option>Refrigerated Truck</option>
+            </select>
+          </label>
+
+          <label>Driver Name
+            <input id="driver_name" maxlength="120" placeholder="Full name" required />
+          </label>
+        </div>
+
+        <div class="two">
+          <label>Driver Phone
+            <input id="driver_phone" maxlength="30" placeholder="+8801…" />
+          </label>
+          <label>Car Number
+            <input id="car_number" maxlength="50" placeholder="Dhaka Metro-XX-00-0000" />
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn outline" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit" id="btn-save">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Modal helpers ---------- */
+    document.querySelectorAll('.modal').forEach(m => m.setAttribute('aria-hidden','true'));
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.setAttribute('aria-hidden','false'); document.body.classList.add('body-modal-open'); } }
+    function closeModal(el){
+      const m = el.closest?.('.modal') || (typeof el==='string' ? document.getElementById(el) : null);
+      if(!m) return; m.setAttribute('aria-hidden','true');
+      const anyOpen = Array.from(document.querySelectorAll('.modal')).some(x=>x.getAttribute('aria-hidden')==='false');
+      if(!anyOpen) document.body.classList.remove('body-modal-open');
+    }
+    document.addEventListener('click', e=>{
+      if(e.target.matches('.open-modal')){
+        resetForm();
+        document.getElementById('modal-title').textContent='Add Agent';
+        openModal(e.target.dataset.modal);
+        document.getElementById('agentForm').dataset.mode='create';
+      }
+      if(e.target.matches('.close-modal,[data-cancel]')) closeModal(e.target);
+      if(e.target.classList.contains('modal')) closeModal(e.target);
+    });
+
+    /* ---------- API + utilities ---------- */
+    // Put the PHP files under /api/
+    const API_LIST = 'api/get_delivery.php';
+    const API      = 'api/delivery.php';
+
+    const $ = s => document.querySelector(s);
+    function showMsg(text){ const el=$('#page-msg'); if(text){ el.textContent=text; el.style.display='block'; } else { el.style.display='none'; } }
+    async function fetchJSON(url, opts={}){
+      let res, text;
+      try{ res = await fetch(url, opts); } catch(e){ throw new Error('Network error: '+e.message); }
+      try{ text = await res.text(); return JSON.parse(text); }
+      catch(e){
+        // Help diagnose 404/HTML errors
+        const brief = (text||'').slice(0,300);
+        throw new Error('Server returned non-JSON: ' + brief);
+      }
+    }
+    function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+    function fmt(t){ if(!t) return ''; const d=new Date(t.replace(' ','T')); return d.toLocaleString(); }
+
+    /* ---------- Render table ---------- */
+    function renderRows(rows){
+      const tb = document.querySelector('#tbl-agents tbody');
+      if(!rows?.length){ tb.innerHTML = '<tr><td colspan="7">No delivery agents found.</td></tr>'; return; }
+      tb.innerHTML = rows.map(r=>`
+        <tr>
+          <td>${r.delivery_id}</td>
+          <td class="facility"><strong>${esc(r.type||'')}</strong></td>
+          <td>${esc(r.driver_name||'')}</td>
+          <td>${esc(r.driver_phone||'')}</td>
+          <td>${esc(r.car_number||'')}</td>
+          <td>${esc(fmt(r.created_at)||'')}</td>
+          <td class="actions">
+            <button class="btn small outline" data-act="edit" data-id="${r.delivery_id}">Edit</button>
+            <button class="btn small danger" data-act="del" data-id="${r.delivery_id}">Delete</button>
+          </td>
+        </tr>`).join('');
+    }
+
+    async function load(){
+      showMsg('');
+      document.querySelector('#tbl-agents tbody').innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+      try{
+        const j = await fetchJSON(API_LIST);
+        if(!j.ok) throw new Error(j.error||'Load failed');
+        renderRows(j.data);
+      }catch(e){
+        showMsg(e.message);
+        document.querySelector('#tbl-agents tbody').innerHTML = '<tr><td colspan="7">Error</td></tr>';
+      }
+    }
+
+    /* ---------- Row actions ---------- */
+    document.body.addEventListener('click', async e=>{
+      const btn = e.target.closest('button[data-act]'); if(!btn) return;
+      const id = +btn.dataset.id;
+
+      if(btn.dataset.act==='edit'){
+        const tds = btn.closest('tr').querySelectorAll('td');
+        $('#delivery_id').value = id;
+        // Pre-select Type
+        const typeText = tds[1].innerText.trim();
+        const typeSel = $('#type'); [...typeSel.options].forEach(o=>{ if(o.value===typeText) o.selected=true; });
+        $('#driver_name').value  = tds[2].innerText.trim();
+        $('#driver_phone').value = tds[3].innerText.trim();
+        $('#car_number').value   = tds[4].innerText.trim();
+        $('#modal-title').textContent='Edit Agent';
+        $('#agentForm').dataset.mode='update';
+        openModal('modal-agent');
+        return;
+      }
+
+      if(btn.dataset.act==='del'){
+        if(!confirm('Delete this agent? This cannot be undone.')) return;
+        try{
+          const j = await fetchJSON(`${API}?id=${encodeURIComponent(id)}`, {method:'DELETE'});
+          if(!j.ok){ showMsg(j.error || 'Delete failed.'); }
+          else { load(); }
+        }catch(err){ showMsg(err.message); }
+      }
+    });
+
+    function resetForm(){
+      ['delivery_id','driver_name','driver_phone','car_number'].forEach(id=>document.getElementById(id).value='');
+      const typeSel = document.getElementById('type'); typeSel.selectedIndex = 0;
+    }
+
+    document.getElementById('agentForm').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const mode = e.currentTarget.dataset.mode || 'create';
+      const payload = {
+        delivery_id: $('#delivery_id').value ? +$('#delivery_id').value : null,
+        type:        $('#type').value,
+        driver_name: $('#driver_name').value.trim(),
+        driver_phone:$('#driver_phone').value.trim() || null,
+        car_number:  $('#car_number').value.trim() || null
+      };
+      if(!payload.type || !payload.driver_name){ showMsg('Type and Driver Name are required'); return; }
+
+      try{
+        const j = await fetchJSON(API, {
+          method: mode==='create'?'POST':'PUT',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if(!j.ok) throw new Error(j.error||'Save failed');
+        closeModal('modal-agent'); load();
+      }catch(err){ showMsg(err.message); }
+    });
+
+    load();
+  </script>
+</body>
+</html>
