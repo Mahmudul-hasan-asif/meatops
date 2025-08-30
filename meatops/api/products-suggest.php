@@ -7,22 +7,19 @@ try {
   $pdo    = $GLOBALS['pdo']    ?? (isset($pdo) ? $pdo : null);
   $mysqli = $GLOBALS['mysqli'] ?? ($GLOBALS['conn'] ?? (isset($mysqli) ? $mysqli : (isset($conn) ? $conn : null)));
 
-  $sql = "SELECT product_id, product_package_name, batch_code, product_name, weight_kg
-          FROM product_list
-          ORDER BY product_id DESC";
-
   if ($pdo instanceof PDO) {
-    $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    $st = $pdo->query("SELECT product_id, product_name FROM product ORDER BY product_id ASC LIMIT 250");
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC);
   } elseif ($mysqli instanceof mysqli) {
-    $res = $mysqli->query($sql);
+    $res = $mysqli->query("SELECT product_id, product_name FROM product ORDER BY product_id ASC LIMIT 250");
     if (!$res) throw new Exception($mysqli->error);
     $rows = [];
-    while ($row = $res->fetch_assoc()) $rows[] = $row;
+    while ($r = $res->fetch_assoc()) $rows[] = $r;
   } else {
-    throw new Exception('db.php loaded, but no PDO ($pdo) or mysqli ($mysqli/$conn) connection found.');
+    throw new Exception('db.php loaded, but no PDO or mysqli connection found.');
   }
 
-  echo json_encode(['ok'=>true, 'data'=>$rows], JSON_UNESCAPED_UNICODE);
+  echo json_encode(['ok'=>true,'data'=>$rows], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
   http_response_code(500);
   echo json_encode(['ok'=>false,'error'=>$e->getMessage()], JSON_UNESCAPED_UNICODE);

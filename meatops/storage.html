@@ -29,7 +29,7 @@
       <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
       <a href="inventory.html" class="nav-link">Inventory</a>
       <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
-      <a href="quality-control.html" class="nav-link">Quality Control</a>
+      <a href="quality.html" class="nav-link">Quality Control</a>
       <a href="waste-management.html" class="nav-link">Waste Management</a>
       <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
       <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
@@ -263,8 +263,8 @@
       lineChart = new Chart(ctx, {
         type: 'line',
         data: { labels, datasets: [
-          { label:'Temp (°C)', data:temp, borderColor:'rgba(88,166,255,1)', backgroundColor:'rgba(88,166,255,.2)', fill:false, tension:.3, pointRadius:2, yAxisID:'y1' },
-          { label:'RH (%)',   data:rh,   borderColor:'rgba(52,211,153,1)', backgroundColor:'rgba(52,211,153,.2)', fill:false, tension:.3, pointRadius:2, yAxisID:'y2' }
+          { label:'Temp (°C)', data:temp, borderColor:'rgba(88,166,255,1)', backgroundColor:'rgba(88,166,255,.2)', fill:false, tension:.3, pointRadius:3, yAxisID:'y1', spanGaps: true  },
+          { label:'RH (%)',   data:rh,   borderColor:'rgba(52,211,153,1)', backgroundColor:'rgba(52,211,153,.2)', fill:false, tension:.3, pointRadius:3, yAxisID:'y2', spanGaps: true  }
         ]},
         options:{ responsive:true, maintainAspectRatio:false,
           scales:{ y1:{type:'linear',position:'left'}, y2:{type:'linear',position:'right',grid:{drawOnChartArea:false},beginAtZero:true} },

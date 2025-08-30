@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- SIDEBAR -->
+  <!-- SIDEBAR / NAVBAR -->
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-icon">🥩</div>
@@ -17,41 +17,39 @@
       </div>
     </div>
 
-    <!-- UNIFIED NAV -->
     <nav class="nav">
-    <a href="dashboard.html" class="nav-link">Dashboard</a>
-    <a href="intake.html" class="nav-link">Livestock / Intake</a>
-    <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
-    <a href="inventory.html" class="nav-link">Inventory</a>
-    <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
-    <a href="quality-control.html" class="nav-link">Quality Control</a>
-    <a href="waste-management.html" class="nav-link">Waste Management</a>
-    <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
-    <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
-    <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
-    <a href="suppliers.html" class="nav-link">Suppliers</a>
-    <a href="customers.html" class="nav-link">Customers</a>
-    <a href="settings.html" class="nav-link">Settings</a>
-  </nav>
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="intake.html" class="nav-link">Livestock / Intake</a>
+      <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+      <a href="quality.html" class="nav-link">Quality Control</a>
+      <a href="waste-management.html" class="nav-link">Waste Management</a>
+      <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+      <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+      <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+      <a href="suppliers.html" class="nav-link">Suppliers</a>
+      <a href="customers.html" class="nav-link">Customers</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </nav>
 
-    <footer class="sidebar-footer">v1.8</footer>
+    <footer class="sidebar-footer">v1.9</footer>
   </aside>
 
-
+  <!-- MAIN -->
   <main class="main">
+    <!-- TOP HEADER -->
     <header class="topbar">
       <div class="breadcrumbs"><span>Processing &amp; Yield</span></div>
     </header>
 
+    <!-- CONTENT -->
     <section class="page show" id="processing">
       <div class="stack">
 
-        <!-- TABLE 1: Pushed Batches -->
+        <!-- Pushed Batches -->
         <div class="card split">
-          <div class="card-head">
-            <h2>Pushed Batches</h2>
-          </div>
-
+          <div class="card-head"><h2>Pushed Batches</h2></div>
           <div class="table-scroll">
             <table class="table" id="tbl-pushed-batches">
               <thead>
@@ -68,19 +66,17 @@
           </div>
         </div>
 
-        <!-- TABLE 2: Product List -->
+        <!-- Product List -->
         <div class="card split">
-          <div class="card-head">
-            <h2>Product List</h2>
-          </div>
-
+          <div class="card-head"><h2>Product List</h2></div>
           <div class="table-scroll">
             <table class="table" id="tbl-product-list">
               <thead>
                 <tr>
                   <th>Product ID</th>
+                  <th>Product Package Name</th> <!-- NEW between Product ID and Batch -->
                   <th>Batch Code</th>
-                  <th>Product Name</th>
+                  <th>Cut Type</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -89,32 +85,10 @@
           </div>
         </div>
 
-        <!-- TABLE 3 placeholder (Waste / Byproducts) -->
-        <div class="card split">
-          <div class="card-head">
-            <h2>Waste / Byproducts</h2>
-          </div>
-          <div class="table-scroll">
-            <table class="table" id="tbl-waste">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Source</th>
-                  <th>Qty (kg)</th>
-                  <th>Notes</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td colspan="5" class="muted">We’ll wire this after Product List.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
       </div>
     </section>
 
+    <!-- FOOTER -->
     <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
   </main>
 
@@ -127,19 +101,27 @@
       </div>
 
       <form class="form" id="form-pack">
-        <input type="hidden" id="pack_batch_id">
         <div class="two">
           <label>Batch Code
             <input id="pack_batch_code" readonly>
           </label>
-          <label>Product Name
+          <label>Batch Product Name
             <input id="pack_product_name" readonly>
           </label>
         </div>
+
         <div class="two">
+          <!-- Take product_id from product table (datalist) -->
+          <label>Product Package ID (product.product_id)
+            <input id="pack_package_pid" list="dlist-products" inputmode="numeric" placeholder="e.g., 1012" required>
+            <datalist id="dlist-products"></datalist>
+          </label>
           <label>Total Quantity (kg)
             <input id="pack_total_qty" readonly>
           </label>
+        </div>
+
+        <div class="two">
           <label>Package Size
             <select id="pack_size" required>
               <option value="1">1 kg</option>
@@ -147,29 +129,27 @@
               <option value="10">10 kg</option>
             </select>
           </label>
+          <div>
+            <label>&nbsp;</label>
+            <div id="pack_preview" class="muted"></div>
+          </div>
         </div>
-
-        <div id="pack_preview" class="muted" style="margin-top:.25rem;"></div>
 
         <div class="modal-actions">
           <button class="btn" type="button" data-cancel>Cancel</button>
-          <button class="btn primary" type="submit">OK</button>
+          <button class="btn primary" type="submit">Pack</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- PRINT AREA (hidden) -->
-  <div id="print-area" style="display:none; font-family: system-ui, Arial, sans-serif;">
-    <div id="print-card" style="padding:16px; border:1px solid #000; width:320px;">
-      <h3 style="margin:0 0 8px;">MeatOps Product</h3>
-      <div><strong>Product ID:</strong> <span id="p_pid"></span></div>
-      <div><strong>Batch:</strong> <span id="p_batch"></span></div>
-      <div><strong>Name:</strong> <span id="p_name"></span></div>
-      <div><strong>Weight:</strong> <span id="p_weight"></span> kg</div>
-      <div><strong>Date:</strong> <span id="p_date"></span></div>
-    </div>
-  </div>
+  <!-- Hidden canvas used to render barcodes before embedding in PDF -->
+  <canvas id="barcodeCanvas" width="640" height="160" style="display:none"></canvas>
+
+  <!-- SCRIPTS -->
+  <!-- Barcode + PDF libs -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <script>
     /* ---------- helpers ---------- */
@@ -208,11 +188,7 @@
           <td>${r.product}</td>
           <td>${fmt2(r.qty_kg)}</td>
           <td>${daysLeft(r.expire_date)}</td>
-          <td>
-            <div class="actions-inline">
-              <button class="btn sm primary act-pack">Pack</button>
-            </div>
-          </td>
+          <td><button class="btn sm primary act-pack">Pack</button></td>
         </tr>
       `;
     }
@@ -231,140 +207,197 @@
       }
     }
 
-    // open pack modal from a pushed row
-    const packForm = document.getElementById('form-pack');
-    const fldPackBatchId   = document.getElementById('pack_batch_id');
-    const fldPackBatchCode = document.getElementById('pack_batch_code');
-    const fldPackProdName  = document.getElementById('pack_product_name');
-    const fldPackTotalQty  = document.getElementById('pack_total_qty');
-    const selPackSize      = document.getElementById('pack_size');
-    const packPreview      = document.getElementById('pack_preview');
-
-    pushedTbody.addEventListener('click', e=>{
-      const row = e.target.closest('tr'); if(!row) return;
-      if(e.target.closest('.act-pack')){
-        const cells = row.children;
-        fldPackBatchId.value   = row.dataset.id;
-        fldPackBatchCode.value = cells[0].textContent.trim();
-        fldPackProdName.value  = cells[1].textContent.trim();
-        fldPackTotalQty.value  = cells[2].textContent.trim(); // numeric string
-        selPackSize.value = '1';
-        updatePackPreview();
-        openModal('modal-pack');
-      }
-    });
-
-    function updatePackPreview(){
-      const total = parseFloat(fldPackTotalQty.value) || 0;
-      const size  = parseFloat(selPackSize.value);
-      if (!total || !size){ packPreview.textContent=''; return; }
-      const whole = Math.floor(total / size);
-      const rem   = +(total - (whole * size)).toFixed(2);
-      const parts = whole + (rem > 0 ? 1 : 0);
-      const detail = rem > 0 ? `${whole}×${size}kg + 1×${rem}kg` : `${whole}×${size}kg`;
-      packPreview.textContent = `This will create ${parts} package(s): ${detail}.`;
-    }
-    selPackSize.addEventListener('change', updatePackPreview);
-
-    /* ---------- TABLE 2: Product List (DB-backed) ---------- */
+    /* ---------- TABLE 2: Product List ---------- */
     const prodTbody = document.querySelector('#tbl-product-list tbody');
 
     function productRowHTML(p){
-      // keep weight available for printing via data attr
       return `
-        <tr data-pid="${p.product_id}" data-weight="${fmt2(p.weight_kg ?? 0)}">
+        <tr data-pid="${p.product_id}" data-weight="${fmt2(p.weight_kg ?? 0)}" data-pkgname="${p.product_package_name ?? ''}">
           <td>${p.product_id}</td>
+          <td>${p.product_package_name ?? ''}</td>
           <td>${p.batch_code}</td>
           <td>${p.product_name}</td>
           <td>
-            <div class="actions-inline">
-              <button class="btn sm outline act-print">Print</button>
-              <button class="btn sm danger act-delete">Delete</button>
-            </div>
+            <button class="btn sm outline act-print">Print</button>
+            <button class="btn sm danger act-delete">Delete</button>
           </td>
         </tr>
       `;
     }
 
     async function loadProducts(){
-      prodTbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+      prodTbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
       try{
         const j = await fetchJSON('api/product-list-list.php');
         if(!j.ok) throw new Error(j.error || 'Load failed');
         const list = Array.isArray(j.data) ? j.data : [];
         prodTbody.innerHTML = list.length
           ? list.map(productRowHTML).join('')
-          : '<tr><td colspan="4">No products yet.</td></tr>';
+          : '<tr><td colspan="5">No products yet.</td></tr>';
       }catch(err){
-        prodTbody.innerHTML = `<tr><td colspan="4">Failed to load.<div class="muted">${err.message}</div></td></tr>`;
+        prodTbody.innerHTML = `<tr><td colspan="5">Failed to load.<div class="muted">${err.message}</div></td></tr>`;
       }
     }
 
-    // PACK -> create product entries in DB
+    /* ---------- Pack modal wiring ---------- */
+    const packForm         = document.getElementById('form-pack');
+    const fldPackBatchCode = document.getElementById('pack_batch_code');
+    const fldPackProdName  = document.getElementById('pack_product_name');
+    const fldPackTotalQty  = document.getElementById('pack_total_qty');
+    const selPackSize      = document.getElementById('pack_size');
+    const fldPkgPID        = document.getElementById('pack_package_pid');
+    const packPreview      = document.getElementById('pack_preview');
+    const dlistProducts    = document.getElementById('dlist-products');
+
+    let productsLoaded = false;
+    async function ensureProductsDatalist(){
+      if (productsLoaded) return;
+      try{
+        const j = await fetchJSON('api/products-suggest.php'); // returns [{product_id, product_name}]
+        if (j.ok && Array.isArray(j.data)) {
+          dlistProducts.innerHTML = j.data
+            .map(p => `<option value="${p.product_id}">${p.product_id} — ${p.product_name}</option>`)
+            .join('');
+          productsLoaded = true;
+        }
+      }catch(_){}
+    }
+
+    function updatePackPreview(){
+      const total = parseFloat(fldPackTotalQty.value)||0;
+      const size  = parseFloat(selPackSize.value)||0;
+      if(!total || !size){ packPreview.textContent=''; return; }
+      const whole = Math.floor(total/size);
+      const rem   = +(total - (whole*size)).toFixed(2);
+      const parts = whole + (rem>0?1:0);
+      const detail = rem>0 ? `${whole}×${size}kg + 1×${rem}kg` : `${whole}×${size}kg`;
+      packPreview.textContent = `This will create ${parts} package(s): ${detail}.`;
+    }
+    selPackSize.addEventListener('change', updatePackPreview);
+
+    pushedTbody.addEventListener('click', async e=>{
+      const row = e.target.closest('tr'); if(!row) return;
+      if(e.target.closest('.act-pack')){
+        const c = row.children;
+        fldPackBatchCode.value = c[0].textContent.trim();
+        fldPackProdName.value  = c[1].textContent.trim();
+        fldPackTotalQty.value  = c[2].textContent.trim();
+        selPackSize.value = '1'; fldPkgPID.value = '';
+        updatePackPreview();
+        await ensureProductsDatalist(); // load choices before opening
+        openModal('modal-pack');
+      }
+    });
+
     packForm.addEventListener('submit', async e=>{
       e.preventDefault();
-
       try{
-        const size = parseFloat(selPackSize.value);
+        const payload = {
+          batch_code: fldPackBatchCode.value,
+          batch_product_name: fldPackProdName.value,
+          total_qty_kg: parseFloat(fldPackTotalQty.value)||0,
+          size_kg: parseFloat(selPackSize.value)||0,
+          product_package_id: parseInt(fldPkgPID.value,10)||0,
+          replace_existing: 1
+        };
+        if (!payload.product_package_id) throw new Error('Please choose a valid Product Package ID from product table.');
         const j = await fetchJSON('api/product-list-pack.php', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
-            batch_code: fldPackBatchCode.value,
-            size_kg: size,
-            replace_existing: 1
-          })
+          body: JSON.stringify(payload)
         });
         if(!j.ok) throw new Error(j.error || 'Pack failed');
-
-        // refresh product list from DB
         await loadProducts();
-
-        // disable the pack button on that pushed row
-        const row = pushedTbody.querySelector(`tr[data-batch="${fldPackBatchCode.value}"]`);
-        if (row) { const btn = row.querySelector('.act-pack'); if (btn) { btn.disabled = true; btn.textContent = 'Packed'; } }
-
         closeModal('modal-pack');
         packForm.reset();
       }catch(err){ alert(err.message); }
     });
 
-    // Delete / Print actions in Product List
+    /* ---------- Delete / Print in Product List ---------- */
+    function barcodeDataURL(value){
+      if (!window.JsBarcode) throw new Error('Barcode library not loaded.');
+      const canvas = document.getElementById('barcodeCanvas');
+      JsBarcode(canvas, value, {
+        format: 'CODE128',
+        displayValue: false,
+        margin: 0,
+        height: 120,   // canvas pixels; scaled down in PDF
+        width: 2
+      });
+      return canvas.toDataURL('image/png');
+    }
+
+    function printLabelPDF({pid, batch, pkgname, name, weight}){
+      if (!window.jspdf || !window.jspdf.jsPDF) { alert('PDF library not loaded.'); return; }
+      const { jsPDF } = window.jspdf;
+
+      // 80x50 mm landscape label
+      const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:[50,80] });
+
+      // Brand / title
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(12);
+      pdf.text('MeatOps', 4, 7);
+
+      // Top text
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(9);
+      pdf.text(`PID: ${pid}`, 4, 13);
+      pdf.text(`Batch: ${batch}`, 40, 13);
+
+      // Middle text
+      const pkg = (pkgname || '').toString();
+      const nm  = (name || '').toString();
+      const trim = (s, max) => (s.length > max ? s.slice(0, max-1) + '…' : s);
+      pdf.text(`Package: ${trim(pkg, 32)}`, 4, 18);
+      pdf.text(`Type: ${trim(nm, 32)}`, 4, 23);
+
+      pdf.text(`Weight: ${weight} kg`, 4, 28);
+      const today = new Date();
+      const ds = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      pdf.text(`Date: ${ds}`, 40, 28);
+
+      // Barcode (product_id)
+      try {
+        const barData = barcodeDataURL(pid);
+        // x, y, w, h
+        pdf.addImage(barData, 'PNG', 4, 31, 72, 14);
+      } catch(e) {
+        pdf.setFont('helvetica','bold'); pdf.setTextColor(200,0,0);
+        pdf.text('Barcode error', 4, 40);
+        pdf.setTextColor(0,0,0);
+      }
+
+      pdf.save(`${pid}.pdf`);
+    }
+
     prodTbody.addEventListener('click', async e=>{
       const row = e.target.closest('tr'); if(!row) return;
-      const pid = row.dataset.pid;
 
-      if (e.target.closest('.act-delete')) {
+      if(e.target.closest('.act-delete')){
+        const pid = row.dataset.pid;
         if(!confirm(`Delete ${pid}?`)) return;
         try{
           const j = await fetchJSON('api/product-list-delete.php', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
+            method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ product_id: pid })
           });
           if(!j.ok) throw new Error(j.error || 'Delete failed');
           row.remove();
           if(!prodTbody.children.length){
-            prodTbody.innerHTML = '<tr><td colspan="4">No products yet.</td></tr>';
+            prodTbody.innerHTML = '<tr><td colspan="5">No products yet.</td></tr>';
           }
         }catch(err){ alert(err.message); }
-        return;
       }
 
-      if (e.target.closest('.act-print')) {
-        const cells = row.children;
-        const fmtDate = new Date().toISOString().slice(0,10);
-        document.getElementById('p_pid').textContent    = cells[0].textContent.trim();
-        document.getElementById('p_batch').textContent  = cells[1].textContent.trim();
-        document.getElementById('p_name').textContent   = cells[2].textContent.trim();
-        document.getElementById('p_weight').textContent = row.dataset.weight || '—';
-        document.getElementById('p_date').textContent   = fmtDate;
-
-        const card = document.getElementById('print-card').outerHTML;
-        const w = window.open('', '_blank', 'width=420,height=600');
-        w.document.write(`<html><head><title>Print Label</title></head><body>${card}<script>window.onload=()=>{window.print(); setTimeout(()=>window.close(), 300);}<\/script></body></html>`);
-        w.document.close();
-        return;
+      if(e.target.closest('.act-print')){
+        // Gather row data
+        const pid     = row.dataset.pid;
+        const weight  = row.dataset.weight;
+        const pkgname = row.dataset.pkgname || '';
+        const batch   = row.children[2].textContent.trim(); // 3rd column (Batch Code)
+        const name    = row.children[3].textContent.trim(); // 4th column (Product Name)
+        try{
+          printLabelPDF({pid, batch, pkgname, name, weight});
+        }catch(err){ alert(err.message); }
       }
     });
 
@@ -372,24 +405,19 @@
     loadPushedBatches();
     loadProducts();
   </script>
+
+  <!-- Highlight current nav item -->
+  <script>
+    (function () {
+      const here = (location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+      document.querySelectorAll('aside .nav a.nav-link').forEach(a => {
+        const href = a.getAttribute('href') || '';
+        const target = href.split('/').pop().split('#')[0].toLowerCase();
+        if (here === target || (here === '' && target === 'dashboard.html')) {
+          a.classList.add('active');
+        }
+      });
+    }());
+  </script>
 </body>
-
-<script defer>
-(function () {
-  // current filename (e.g., 'inventory.html'); default dashboard
-  const here = (location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
-
-  document.querySelectorAll('aside .nav a.nav-link').forEach(a => {
-    const href = a.getAttribute('href') || '';
-    // compare only the file part of the href (strip folders and #hash)
-    const target = href.split('/').pop().split('#')[0].toLowerCase();
-
-    if (here === target || (here === '' && target === 'dashboard.html')) {
-      a.classList.add('active');
-    }
-  });
-}());
-</script>
-
-
 </html>

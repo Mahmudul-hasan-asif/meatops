@@ -1,99 +1,59 @@
 <?php
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+if($_SERVER['REQUEST_METHOD']==='OPTIONS') exit;
 
-function get_pdo() {
-  static $pdo = null;
-  if ($pdo) return $pdo;
+$PROD_TABLE = 'product';
 
-  $host = '127.0.0.1';
-  $db   = 'meat_inventory';
-  $user = 'root';
-  $pass = '';
-  $charset = 'utf8mb4';
+$__paths=[__DIR__.'/../db.php', dirname(__DIR__).'/db.php', __DIR__.'/db.php', dirname(__DIR__,2).'/db.php'];
+$__ok=false; foreach($__paths as $__p){ if(is_file($__p)){ require_once $__p; $__ok=true; break; } }
+if(!$__ok){ http_response_code(500); echo json_encode(['ok'=>false,'error'=>'db.php not found']); exit; }
 
-  $cfg = __DIR__ . '/config.php';
-  if (file_exists($cfg)) {
-    require_once $cfg;
-    if (defined('DB_HOST')) { $host = DB_HOST; }
-    if (defined('DB_NAME')) { $db   = DB_NAME; }
-    if (defined('DB_USER')) { $user = DB_USER; }
-    if (defined('DB_PASS')) { $pass = DB_PASS; }
-  }
+$pdo=(isset($pdo)&&$pdo instanceof PDO)?$pdo:(function_exists('getPDO')?getPDO():(function_exists('pdo_conn')?pdo_conn():null));
+$mysqli=null; foreach(['mysqli','conn','con','db','link','connection'] as $h){ if(isset($$h)&&$$h instanceof mysqli){ $mysqli=$$h; break; } }
 
-  $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-  $opt = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-  ];
-  return $pdo = new PDO($dsn, $user, $pass, $opt);
+function run_exec($s,$p=[]){ global $pdo,$mysqli;
+  if($pdo){ $st=$pdo->prepare($s); return $st->execute($p); }
+  $st=$mysqli->prepare($s); if(!$st) throw new Exception($mysqli->error);
+  if($p){ $t=''; $v=[]; foreach($p as $x){ $t.=is_int($x)?'i':(is_float($x)?'d':'s'); $v[]=$x; }
+    $b=[$t]; foreach($v as $i=>$y){ $b[]=&$v[$i]; } call_user_func_array([$st,'bind_param'],$b); }
+  $ok=$st->execute(); if(!$ok){ $e=$st->error; $st->close(); throw new Exception($e); } $st->close(); return $ok;
+}
+function run_select($s,$p=[]){ global $pdo,$mysqli;
+  if($pdo){ $st=$pdo->prepare($s); $st->execute($p); return $st->fetchAll(PDO::FETCH_ASSOC); }
+  $st=$mysqli->prepare($s); if(!$st) throw new Exception($mysqli->error);
+  if($p){ $t=''; $v=[]; foreach($p as $x){ $t.=is_int($x)?'i':(is_float($x)?'d':'s'); $v[]=$x; }
+    $b=[$t]; foreach($v as $i=>$y){ $b[]=&$v[$i]; } call_user_func_array([$st,'bind_param'],$b); }
+  $st->execute(); $r=$st->get_result(); $rows=$r?$r->fetch_all(MYSQLI_ASSOC):[]; $st->close(); return $rows;
 }
 
-function read_payload() {
-  $ct = $_SERVER['CONTENT_TYPE'] ?? '';
-  if (stripos($ct, 'application/json') !== false) {
-    $raw = file_get_contents('php://input');
-    $j = json_decode($raw, true);
-    if (is_array($j)) return $j;
-  }
-  return $_POST;
-}
+$in = json_decode(file_get_contents('php://input'), true);
+if(!is_array($in)) $in = $_POST;
 
-try {
-  $data = read_payload();
-  $id         = isset($data['product_id']) ? (int)$data['product_id'] : 0;
-  $name       = trim($data['product_name'] ?? '');
-  $price      = isset($data['price']) ? (float)$data['price'] : null;
-  $quantity   = isset($data['quantity']) ? (int)$data['quantity'] : null;
-  $sale       = isset($data['sale']) ? (int)$data['sale'] : 0;
-  $shelf_life = isset($data['shelf_life']) ? (int)$data['shelf_life'] : 0;
-  $start_date = trim($data['start_date'] ?? '');
+$id       = (int)($in['product_id'] ?? 0);
+$animal   = strtolower(trim($in['animal_type'] ?? 'cow'));
+if(!in_array($animal, ['cow','chicken','mutton','duck'])) $animal = 'cow';
+$name     = trim($in['product_name'] ?? '');
+$price    = isset($in['price']) ? (float)$in['price'] : 0;
+$qty      = isset($in['quantity']) ? (int)$in['quantity'] : 0;
 
-  if ($id <= 0) {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'error' => 'Invalid product_id']);
-    exit;
-  }
+$sale     = (string)($in['sale'] ?? '0') === '1' ? 1 : 0;
+$disc     = $sale ? (isset($in['sale_discount_percent']) ? (float)$in['sale_discount_percent'] : null) : null;
+$sale_end = $sale ? (!empty($in['sale_end_date']) ? date('Y-m-d', strtotime($in['sale_end_date'])) : null) : null;
 
-  if ($name === '' || $price === null || $quantity === null || $start_date === '') {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'error' => 'Missing required fields']);
-    exit;
-  }
+try{
+  if(!$id) throw new Exception('product_id required');
+  if($name==='') throw new Exception('product_name required');
 
-  $pdo = get_pdo();
-  $stmt = $pdo->prepare("
-    UPDATE product
-    SET product_name = :name,
-        price        = :price,
-        quantity     = :quantity,
-        sale         = :sale,
-        shelf_life   = :shelf_life,
-        start_date   = :start_date
-    WHERE product_id = :id
-  ");
-  $stmt->execute([
-    ':name'        => $name,
-    ':price'       => $price,
-    ':quantity'    => $quantity,
-    ':sale'        => $sale ? 1 : 0,
-    ':shelf_life'  => $shelf_life,
-    ':start_date'  => $start_date,
-    ':id'          => $id,
-  ]);
+  run_exec("UPDATE `$PROD_TABLE`
+              SET `animal_type`=?,`product_name`=?,`price`=?,`quantity`=?,`sale`=?,
+                  `sale_discount_percent`=?,`sale_end_date`=?
+            WHERE `product_id`=?",
+           [$animal,$name,$price,$qty,$sale,$disc,$sale_end,$id]);
 
-  $row = [
-    'product_id'   => $id,
-    'product_name' => $name,
-    'price'        => (float)$price,
-    'quantity'     => (int)$quantity,
-    'sale'         => $sale ? 1 : 0,
-    'shelf_life'   => (int)$shelf_life,
-    'start_date'   => $start_date,
-  ];
-
-  echo json_encode(['ok' => true, 'data' => $row]);
-} catch (Throwable $e) {
-  http_response_code(500);
-  echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+  $row = run_select("SELECT `product_id`,`animal_type`,`product_name`,`price`,`quantity`,`sale`,`sale_discount_percent`,`sale_end_date`
+                     FROM `$PROD_TABLE` WHERE `product_id`=?", [$id]);
+  echo json_encode(['ok'=>true,'data'=>$row ? $row[0] : null]);
+}catch(Throwable $e){
+  http_response_code(500); echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
 }

@@ -1,65 +1,34 @@
 <?php
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
 
-function get_pdo() {
-  static $pdo = null;
-  if ($pdo) return $pdo;
+$PROD_TABLE = 'product';
 
-  // Defaults for XAMPP
-  $host = '127.0.0.1';
-  $db   = 'meat_inventory';
-  $user = 'root';
-  $pass = '';
-  $charset = 'utf8mb4';
+$__paths=[__DIR__.'/../db.php', dirname(__DIR__).'/db.php', __DIR__.'/db.php', dirname(__DIR__,2).'/db.php'];
+$__ok=false; foreach($__paths as $__p){ if(is_file($__p)){ require_once $__p; $__ok=true; break; } }
+if(!$__ok){ http_response_code(500); echo json_encode(['ok'=>false,'error'=>'db.php not found']); exit; }
 
-  // If a config.php exists with DB_* constants, use them
-  $cfg = __DIR__ . '/config.php';
-  if (file_exists($cfg)) {
-    require_once $cfg;
-    if (defined('DB_HOST')) { $host = DB_HOST; }
-    if (defined('DB_NAME')) { $db   = DB_NAME; }
-    if (defined('DB_USER')) { $user = DB_USER; }
-    if (defined('DB_PASS')) { $pass = DB_PASS; }
-  }
+$pdo=(isset($pdo)&&$pdo instanceof PDO)?$pdo:(function_exists('getPDO')?getPDO():(function_exists('pdo_conn')?pdo_conn():null));
+$mysqli=null; foreach(['mysqli','conn','con','db','link','connection'] as $h){ if(isset($$h)&&$$h instanceof mysqli){ $mysqli=$$h; break; } }
 
-  $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-  $opt = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-  ];
-  return $pdo = new PDO($dsn, $user, $pass, $opt);
+function run_select($s,$p=[]){ global $pdo,$mysqli;
+  if($pdo){ $st=$pdo->prepare($s); $st->execute($p); return $st->fetchAll(PDO::FETCH_ASSOC); }
+  $st=$mysqli->prepare($s); if(!$st) throw new Exception($mysqli->error);
+  if($p){ $t=''; $v=[]; foreach($p as $x){ $t.=is_int($x)?'i':(is_float($x)?'d':'s'); $v[]=$x; }
+    $b=[$t]; foreach($v as $i=>$y){ $b[]=&$v[$i]; } call_user_func_array([$st,'bind_param'],$b); }
+  $st->execute(); $r=$st->get_result(); $rows=$r?$r->fetch_all(MYSQLI_ASSOC):[]; $st->close(); return $rows;
 }
 
-try {
-  $pdo = get_pdo();
-  // Include shelf_life so the UI can display it (replacing Stock column).
-  $stmt = $pdo->query("
-    SELECT 
-      p.product_id,
-      p.product_name,
-      p.price,
-      p.quantity,
-      p.sale,
-      p.shelf_life,
-      p.start_date
-    FROM product p
-    ORDER BY p.product_id DESC
+try{
+  $rows = run_select("
+    SELECT
+      `product_id`,`animal_type`,`product_name`,`price`,`quantity`,
+      `sale`,`sale_discount_percent`,`sale_end_date`
+    FROM `$PROD_TABLE`
+    ORDER BY `product_id` DESC
+    LIMIT 1000
   ");
-  $rows = $stmt->fetchAll();
-
-  // Cast numeric fields so frontend doesn't choke
-  foreach ($rows as &$r) {
-    $r['product_id'] = (int)$r['product_id'];
-    $r['price']      = $r['price'] !== null ? (float)$r['price'] : 0.0;
-    $r['quantity']   = (int)$r['quantity'];
-    $r['sale']       = (int)$r['sale'];
-    $r['shelf_life'] = isset($r['shelf_life']) ? (int)$r['shelf_life'] : 0;
-    // start_date stays as string (YYYY-MM-DD)
-  }
-
-  echo json_encode(['ok' => true, 'data' => $rows]);
-} catch (Throwable $e) {
-  http_response_code(500);
-  echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+  echo json_encode(['ok'=>true,'data'=>$rows]);
+}catch(Throwable $e){
+  http_response_code(500); echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
 }

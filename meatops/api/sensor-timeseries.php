@@ -2,61 +2,83 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-/* db.php attach */
-$root = dirname(__DIR__);
-foreach ([$root.'/db.php', __DIR__.'/../db.php', __DIR__.'/db.php'] as $p) { if (is_file($p)) { require_once $p; break; } }
-$pdo = isset($pdo) && $pdo instanceof PDO ? $pdo : null;
-$mysqli = null;
-foreach (['mysqli','conn','con','db'] as $v) { if (isset($$v) && $$v instanceof mysqli) { $mysqli = $$v; break; } }
-if (!$pdo && function_exists('pdo_conn')) { $pdo = pdo_conn(); }
-if (!$pdo && function_exists('getPDO'))  { $pdo = getPDO(); }
-if (!$pdo && function_exists('db'))      { $maybe = db(); if ($maybe instanceof PDO) $pdo=$maybe; elseif ($maybe instanceof mysqli) $mysqli=$maybe; }
-if (!$pdo && !$mysqli && defined('DB_HOST') && defined('DB_NAME') && defined('DB_USER')) {
-  $pass = defined('DB_PASS') ? DB_PASS : '';
-  try { $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]); } catch(Throwable $e){}
-}
-if (!$pdo && !$mysqli) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>'DB connect failed via db.php']); exit; }
+/* Safe include of db.php */
+$__paths=[__DIR__.'/../db.php', dirname(__DIR__).'/db.php', __DIR__.'/db.php', dirname(__DIR__,2).'/db.php'];
+$__ok=false; foreach($__paths as $__p){ if(is_file($__p)){ require_once $__p; $__ok=true; break; } }
+if(!$__ok){ http_response_code(500); echo json_encode(['ok'=>false,'error'=>'db.php not found','tried'=>$__paths]); exit; }
 
-function run_select($sql,$params){
+/* Detect handles */
+$pdo = (isset($pdo) && $pdo instanceof PDO) ? $pdo
+     : (function_exists('getPDO') ? getPDO() : (function_exists('pdo_conn') ? pdo_conn() : null));
+$mysqli=null; foreach(['mysqli','conn','con','db','link','connection'] as $h){ if(isset($$h) && $$h instanceof mysqli){ $mysqli=$$h; break; } }
+
+/* Query helper */
+function run_select($sql,$params=[]){
   global $pdo,$mysqli;
-  if ($pdo){ $st=$pdo->prepare($sql); $st->execute($params); return $st->fetchAll(PDO::FETCH_ASSOC); }
-  $st=$mysqli->prepare($sql);
-  if ($params){
-    $types=''; $bind=$params;
-    foreach($bind as $k=>$v){ $types.=is_int($v)?'i':(is_float($v)?'d':'s'); $bind[$k]=$v; }
-    $args=array_merge([$types], array_map(fn(&$x)=>$x,$bind));
-    call_user_func_array([$st,'bind_param'],$args);
+  if($pdo){ $st=$pdo->prepare($sql); $st->execute($params); return $st->fetchAll(PDO::FETCH_ASSOC); }
+  if($mysqli){
+    $st=$mysqli->prepare($sql); if(!$st) throw new Exception('MySQLi prepare failed: '.$mysqli->error);
+    if($params){ $types=''; $vals=[]; foreach($params as $v){ $types.=is_int($v)?'i':(is_float($v)?'d':'s'); $vals[]=$v; }
+      $bind=[$types]; foreach($vals as $i=>$v){ $bind[]=&$vals[$i]; } call_user_func_array([$st,'bind_param'],$bind); }
+    $st->execute(); $res=method_exists($st,'get_result')?$st->get_result():null; $rows=$res?$res->fetch_all(MYSQLI_ASSOC):[]; $st->close(); return $rows;
   }
-  $st->execute(); $res=$st->get_result(); $rows=$res->fetch_all(MYSQLI_ASSOC); $st->close(); return $rows;
+  throw new Exception('db.php included but no PDO/mysqli connection found');
 }
 
-$fac   = $_GET['facility'] ?? '';
-$dev   = $_GET['device'] ?? '';
-$hours = max(1, min(48, (int)($_GET['hours'] ?? 12)));
-$since = date('Y-m-d H:i:s', time() - $hours*3600);
+try{
+  $facility = $_GET['facility'] ?? '';
+  $device   = $_GET['device'] ?? '';
+  $hours    = max(1, min(72, (int)($_GET['hours'] ?? 12)));
+  $since    = date('Y-m-d H:i:s', time() - $hours*3600);
 
-try {
-  $rows = run_select(
-    "SELECT DATE_FORMAT(timestamp, '%H:%i') as bucket, metric, AVG(value) as v
-     FROM sensor_readings
-     WHERE facility = ? AND device = ? AND timestamp >= ? AND metric IN ('TEMP','RH')
-     GROUP BY bucket, metric
-     ORDER BY bucket ASC",
-    [$fac,$dev,$since]
+  // 1) Primary source: sensor_readings (TEMP / RH)
+  $r1 = run_select(
+    "SELECT `timestamp`, `metric`, `value`
+       FROM `sensor_readings`
+      WHERE `timestamp` >= ?
+        AND (? = '' OR `facility` = ?)
+        AND (? = '' OR `device`   = ?)
+        AND `metric` IN ('TEMP','RH')
+      ORDER BY `timestamp` ASC",
+    [$since, $facility,$facility, $device,$device]
   );
 
-  $labels = []; $mapT=[]; $mapR=[];
-  foreach ($rows as $r) {
-    $labels[$r['bucket']] = true;
-    if ($r['metric']==='TEMP') $mapT[$r['bucket']] = round((float)$r['v'],2);
-    if ($r['metric']==='RH')   $mapR[$r['bucket']] = round((float)$r['v'],2);
+  // 2) Fallback/augment: device_status recent snapshots → map to TEMP/RH
+  $r2 = run_select(
+    "SELECT `last_seen` AS `timestamp`, `humidity`, `temp`
+       FROM `device_status`
+      WHERE `last_seen` >= ?
+        AND (? = '' OR `facility` = ?)
+        AND (? = '' OR `device`   = ?)
+      ORDER BY `last_seen` ASC",
+    [$since, $facility,$facility, $device,$device]
+  );
+
+  // Merge into minute-buckets; prefer sensor_readings when both exist
+  $bucket = []; // key: 'Y-m-d H:i' => ['t'=>?, 'h'=>?]
+  foreach ($r2 as $row) {
+    $k = date('Y-m-d H:i', strtotime($row['timestamp']));
+    if (!isset($bucket[$k])) $bucket[$k] = ['t'=>null,'h'=>null];
+    if ($row['temp']     !== null && $bucket[$k]['t']===null) $bucket[$k]['t'] = (float)$row['temp'];
+    if ($row['humidity'] !== null && $bucket[$k]['h']===null) $bucket[$k]['h'] = (float)$row['humidity'];
   }
-  $labels = array_keys($labels); sort($labels,SORT_STRING);
-  $temp=[]; $rh=[];
-  foreach ($labels as $b) { $temp[] = $mapT[$b] ?? null; $rh[] = $mapR[$b] ?? null; }
+  foreach ($r1 as $row) {
+    $k = date('Y-m-d H:i', strtotime($row['timestamp']));
+    if (!isset($bucket[$k])) $bucket[$k] = ['t'=>null,'h'=>null];
+    if ($row['metric']==='TEMP') $bucket[$k]['t'] = (float)$row['value'];
+    if ($row['metric']==='RH')   $bucket[$k]['h'] = (float)$row['value'];
+  }
+
+  // Build arrays for Chart.js
+  ksort($bucket);
+  $labels=[]; $temp=[]; $rh=[];
+  foreach ($bucket as $k=>$v) {
+    $labels[] = substr($k, 11);    // 'H:i'
+    $temp[]   = $v['t'];
+    $rh[]     = $v['h'];
+  }
 
   echo json_encode(['ok'=>true,'labels'=>$labels,'temp'=>$temp,'rh'=>$rh]);
-} catch (Throwable $e) {
-  http_response_code(500);
-  echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
+}catch(Throwable $e){
+  http_response_code(500); echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
 }

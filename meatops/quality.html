@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeatOps Admin – Quality Control</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* --- overlap fixes --- */
+    .stack{display:flex;flex-direction:column;gap:24px}
+    .card{position:relative;display:block;margin:0;border-radius:12px}
+    .card::after{content:"";display:block;clear:both}
+    .table-scroll{overflow:auto;max-width:100%}
+    table.table{width:100%;border-collapse:separate;border-spacing:0}
+    /* helpful utilities used below */
+    .hidden{display:none!important}
+    .msg{margin:.5rem 0;padding:.5rem .75rem;border-radius:.5rem;font-size:.9rem}
+    .msg.err{background:#2a0e0e;color:#ffdddd;border:1px solid #5a1a1a}
+    .tag{padding:.15rem .5rem;border:1px solid var(--border,#333);border-radius:.5rem;background:var(--bg-soft,#141414)}
+    .table .select{min-width:130px}
+  </style>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🥩</div>
+      <div><h1>MeatOps</h1><small>Admin Console</small></div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="intake.html" class="nav-link">Livestock / Intake</a>
+      <a href="processing.html" class="nav-link">Processing &amp; Yield</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="storage.html" class="nav-link">Storage &amp; IoT</a>
+      <a href="quality.html" class="nav-link">Quality Control</a>
+      <a href="waste-management.html" class="nav-link">Waste Management</a>
+      <a href="orders.html" class="nav-link">Orders &amp; Distribution</a>
+      <a href="analytics.html" class="nav-link">Forecasting &amp; Analytics</a>
+      <a href="compliance.html" class="nav-link">Compliance &amp; Recall</a>
+      <a href="suppliers.html" class="nav-link">Suppliers</a>
+      <a href="customers.html" class="nav-link">Customers</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </nav>
+    <footer class="sidebar-footer">v2.2</footer>
+  </aside>
+
+  <main class="main">
+    <header class="topbar"><div class="breadcrumbs"><span>Quality Control</span></div></header>
+
+    <section class="page show" id="quality">
+      <div class="stack"><!-- <- ensures spacing between the two cards -->
+
+        <!-- QC Queue -->
+        <div class="card">
+          <div class="card-head">
+            <h2>QC Queue</h2>
+            <button id="btn-add" class="btn primary open-modal" data-modal="modal-add">+ Add QC Unit</button>
+          </div>
+          <div id="page-msg" class="msg err hidden"></div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-qc">
+              <thead>
+                <tr>
+                  <th>Batch</th>
+                  <th>Time</th>
+                  <th>Inspector</th>
+                  <th>Quality</th>
+                  <th style="width:110px;">Action</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="5">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Waiting for Review -->
+        <div class="card">
+          <div class="card-head"><h2>Waiting for Review</h2></div>
+          <div id="wait-msg" class="msg err hidden"></div>
+          <div class="table-scroll">
+            <table class="table" id="tbl-wait">
+              <thead>
+                <tr>
+                  <th>Batch</th>
+                  <th>Time</th>
+                  <th>Inspector</th>
+                  <th>Quality</th>
+                  <th style="width:110px;">Action</th>
+                  <th>Added</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="6">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /.stack -->
+    </section>
+
+    <footer class="footer">© 2025 MeatOps • All actions are auditable.</footer>
+  </main>
+
+  <!-- Add QC Modal -->
+  <div class="modal" id="modal-add" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Add QC Unit</h3>
+        <button class="icon close-modal">✕</button>
+      </div>
+      <form id="form-add-qc" class="form" novalidate>
+        <div class="two">
+          <label>Batch
+            <select id="m_batch" required></select>
+          </label>
+          <label>Time
+            <input type="datetime-local" id="m_time" />
+          </label>
+        </div>
+        <div class="two">
+          <label>Inspector
+            <input id="m_inspector" placeholder="Inspector name" />
+          </label>
+          <label>Quality
+            <select id="m_quality" class="select">
+              <option value="passed">Passed</option>
+              <option value="pause">Pause</option>
+              <option value="fail">Fail</option>
+            </select>
+          </label>
+        </div>
+        <div id="m_msg" class="msg err hidden"></div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="button" id="save-qc">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Modal helpers ---------- */
+    document.querySelectorAll('.modal').forEach(m => m.setAttribute('aria-hidden','true'));
+    function openModal(id){ const m=document.getElementById(id); if(m){ m.setAttribute('aria-hidden','false'); document.body.classList.add('body-modal-open'); } }
+    function closeModal(el){
+      const m = el.closest?.('.modal') || (typeof el==='string' ? document.getElementById(el) : null);
+      if(!m) return; m.setAttribute('aria-hidden','true');
+      const anyOpen = Array.from(document.querySelectorAll('.modal')).some(x=>x.getAttribute('aria-hidden')==='false');
+      if(!anyOpen) document.body.classList.remove('body-modal-open');
+    }
+    document.addEventListener('click', e=>{
+      if(e.target.matches('.open-modal')) { if(e.target.dataset.modal === 'modal-add') prepAddModal(); openModal(e.target.dataset.modal); }
+      if(e.target.matches('.close-modal,[data-cancel]')) closeModal(e.target);
+      if(e.target.classList.contains('modal')) closeModal(e.target);
+    });
+
+    /* ---------- Endpoints ---------- */
+    const API = {
+      list:    'api/qc-list.php',
+      create:  'api/qc-create.php',
+      process: 'api/qc-process.php',
+      waiting: 'api/qc-waiting-list.php',
+      batches: 'api/batch-list.php'
+    };
+
+    /* ---------- Utils ---------- */
+    const pad = n => (''+n).padStart(2,'0');
+    const nowLocal = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    function showMsg(id, text){ const el=document.getElementById(id); if(!el) return; if(text){ el.textContent=text; el.classList.remove('hidden'); } else { el.classList.add('hidden'); } }
+    async function fetchJSON(url, opts={}){ let res, text; try{ res = await fetch(url, opts); }catch(e){ throw new Error('Network error: '+e.message); } try{ text = await res.text(); return JSON.parse(text); } catch(e){ throw new Error('Server returned non-JSON: '+(text||'').slice(0,200)); } }
+
+    /* ---------- Loaders ---------- */
+    async function loadQC(){
+      const tb = document.querySelector('#tbl-qc tbody');
+      try{
+        const j = await fetchJSON(API.list);
+        if(!j.ok) throw new Error(j.error||'Load failed');
+        const rows = j.data||[];
+        if(!rows.length){ tb.innerHTML = '<tr><td colspan="5">No QC items.</td></tr>'; return; }
+        tb.innerHTML = rows.map(r=>{
+          const dt = r.time ? new Date(r.time.replace(' ','T')).toLocaleString() : '';
+          return `<tr>
+            <td><span class="tag">${r.batch_code}</span></td>
+            <td>${dt}</td>
+            <td>${r.inspector||''}</td>
+            <td>
+              <select class="select qsel" data-id="${r.id}">
+                <option value="passed" ${r.quality==='passed'?'selected':''}>Passed</option>
+                <option value="pause"  ${r.quality==='pause'?'selected':''}>Pause</option>
+                <option value="fail"   ${r.quality==='fail'?'selected':''}>Fail</option>
+              </select>
+            </td>
+            <td><button class="btn small primary act" data-id="${r.id}">Apply</button></td>
+          </tr>`;
+        }).join('');
+
+        tb.querySelectorAll('.act').forEach(btn=>{
+          btn.onclick = async () => {
+            const id = btn.dataset.id;
+            const sel = tb.querySelector(`.qsel[data-id="${id}"]`);
+            const quality = sel ? sel.value : 'pause';
+            btn.disabled = true;
+            try{
+              const j2 = await fetchJSON(API.process, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, quality})});
+              if(!j2.ok) throw new Error(j2.error||'Process failed');
+              loadAll();
+            }catch(e){ alert(e.message); }
+            btn.disabled = false;
+          };
+        });
+
+      }catch(e){
+        showMsg('page-msg', e.message);
+        tb.innerHTML = '<tr><td colspan="5">Error</td></tr>';
+      }
+    }
+
+    async function loadWaiting(){
+      const tb = document.querySelector('#tbl-wait tbody');
+      try{
+        const j = await fetchJSON(API.waiting);
+        if(!j.ok) throw new Error(j.error||'Load failed');
+        const rows = j.data||[];
+        if(!rows.length){ tb.innerHTML = '<tr><td colspan="6">Empty</td></tr>'; return; }
+        tb.innerHTML = rows.map(r=>{
+          const dt = r.time ? new Date(r.time.replace(' ','T')).toLocaleString() : '';
+          const ad = r.created_at ? new Date(r.created_at.replace(' ','T')).toLocaleString() : '';
+          return `<tr>
+            <td><span class="tag">${r.batch_code}</span></td>
+            <td>${dt}</td>
+            <td>${r.inspector||''}</td>
+            <td>
+              <select class="select wsel" data-id="${r.id}">
+                <option value="passed">Passed</option>
+                <option value="fail">Fail</option>
+              </select>
+            </td>
+            <td><button class="btn small primary wact" data-id="${r.id}">Apply</button></td>
+            <td>${ad||''}</td>
+          </tr>`;
+        }).join('');
+
+        tb.querySelectorAll('.wact').forEach(btn=>{
+          btn.onclick = async () => {
+            const wid = btn.dataset.id;
+            const sel = tb.querySelector(`.wsel[data-id="${wid}"]`);
+            const quality = sel ? sel.value : 'passed';
+            btn.disabled = true;
+            try{
+              const j2 = await fetchJSON(API.process, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({wait_id: wid, quality})});
+              if(!j2.ok) throw new Error(j2.error||'Process failed');
+              loadAll();
+            }catch(e){ alert(e.message); }
+            btn.disabled = false;
+          };
+        });
+
+      }catch(e){
+        showMsg('wait-msg', e.message);
+        tb.innerHTML = '<tr><td colspan="6">Error</td></tr>';
+      }
+    }
+
+    function loadAll(){ loadQC(); loadWaiting(); }
+
+    /* ---------- Add QC Modal prep & save ---------- */
+    async function prepAddModal(){
+      const sel = document.getElementById('m_batch');
+      if (!sel.options.length) {
+        try{
+          const j = await fetchJSON(API.batches);
+          if(!j.ok) throw new Error(j.error||'Batch list failed');
+          sel.innerHTML = j.data.map(b=>`<option value="${b.batch_code}">${b.batch_code}</option>`).join('');
+        }catch(e){ document.getElementById('m_msg').textContent = e.message; document.getElementById('m_msg').classList.remove('hidden'); }
+      }
+      document.getElementById('m_time').value = nowLocal();
+      document.getElementById('m_inspector').value = '';
+      document.getElementById('m_quality').value = 'passed';
+      document.getElementById('m_msg').classList.add('hidden');
+    }
+
+    document.getElementById('save-qc').addEventListener('click', async ()=>{
+      const body = {
+        batch_code: document.getElementById('m_batch').value,
+        time:       document.getElementById('m_time').value,
+        inspector:  document.getElementById('m_inspector').value,
+        quality:    document.getElementById('m_quality').value
+      };
+      try{
+        const j = await fetchJSON(API.create, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+        if(!j.ok) throw new Error(j.error||'Save failed');
+        (document.getElementById('modal-add')||{}).setAttribute('aria-hidden','true');
+        loadAll();
+      }catch(e){
+        document.getElementById('m_msg').textContent = e.message;
+        document.getElementById('m_msg').classList.remove('hidden');
+      }
+    });
+
+    /* ---------- Init ---------- */
+    (function init(){
+      loadAll();
+      const here=(location.pathname.split('/').pop()||'quality.html').toLowerCase();
+      document.querySelectorAll('aside .nav a.nav-link').forEach(a=>{
+        const target=(a.getAttribute('href')||'').split('/').pop().split('#')[0].toLowerCase();
+        if(here===target) a.classList.add('active');
+      });
+    })();
+  </script>
+</body>
+</html>
